@@ -1,0 +1,144 @@
+---
+title: "chicago_isat"
+author: "Amy Tan"
+date: "11/15/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyr)
+library(reshape2)
+library(janitor)
+library(gt)
+library(googlesheets4)
+library(infer)
+library(fs)
+library(readxl)
+library(rstanarm)
+library(reprex)
+library(cowplot)
+library(stringr)
+library(broom)
+library(plyr)
+library(ggridges)
+library(moderndive)
+library(tidyverse)
+```
+
+```{r}
+#x <- read_excel("raw-data/Algebra_exit_exam_2009-2014.xls")
+
+#don't need this for now, so rm
+#rm(x)
+
+# doesnt work
+#z <- read_excel("raw-data/isat_schools_FINAL_2001_to_2014_yrdown_By_Grade_wELL_Official_20140828")
+
+sheets_deauth()
+
+# reading in ISAT data via google sheets
+y <- read_sheet("1aosXO1LMDHl9KMCZvPp4tinTRy3-84FBOfht2xcurBo", skip = 1)
+
+y <- y %>% clean_names() 
+
+```
+
+```{r}
+
+# vector for SE elementary schools
+
+se_elem <- c("BEASLEY", "BEAUBIEN", "BELL", "CARNEGIE", "COONLEY", "EDISON, T", "KELLER", "LENART", "MCPHERSON", "NATIONAL TEACHERS", "PRITZKER", "GREELEY", "OROZCO", "PULASKI", "BRONZEVILLE LTHOUSE CHTR CAMPUS", "DECATUR", "MCDADE", "POE", "SKINNER", "SKINNER NORTH")
+
+# adding markers for SE schools and policy years
+
+y <- y %>% mutate(se = ifelse(school_name %in% se_elem, 1, 0)) %>% mutate(policy_year = ifelse(year >2010, 1, 0))
+
+# interaction variable between SE schools and policy years
+
+y <- y %>% mutate(did = se * policy_year)
+
+
+# Estimating the DID estimator:
+
+# unlisted the composite_12 variable in order to make it a numeric variable 
+
+y$new_composite_12 <- unlist(y$composite_12)
+y$new_composite_12 <- as.numeric(y$new_composite_12)
+
+# did regression
+didreg = lm(new_composite_12 ~ se + policy_year + did, data = y)
+
+# plot parallel slopes for SE and non-SE schools
+
+ggplot(y, aes(year, new_composite_12, group = se, color = se)) +
+  stat_summary(geom = 'line') +
+    geom_vline(xintercept = 2011) +
+    theme_minimal()
+
+# get regression outputs in a table
+summary(didreg)
+
+didreg_table <- get_regression_table(didreg, digits = 3)
+
+didreg_table <-gt(didreg_table)
+
+```
+```{r school_demo_data, echo=FALSE}
+
+
+demo_2002 <- read_xlsx("demo_data/Thesis_demographic_data/2002_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text") 
+
+demo_2003 <- read_xlsx("demo_data/Thesis_demographic_data/2003_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
+
+demo_2004 <- read_xlsx("demo_data/Thesis_demographic_data/2004_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
+
+demo_2005 <- read_xlsx("demo_data/Thesis_demographic_data/2005_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
+
+demo_2006 <- read_xlsx("demo_data/Thesis_demographic_data/2006_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
+
+demo_2007 <- read_xlsx("demo_data/Thesis_demographic_data/2007_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
+
+demo_2008 <- read_xlsx("demo_data/Thesis_demographic_data/2008_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
+
+demo_2009 <- read_xlsx("demo_data/Thesis_demographic_data/2009_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
+
+demo_2010 <- read_xlsx("demo_data/Thesis_demographic_data/2010_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
+
+demo_2011 <- read_xlsx("demo_data/Thesis_demographic_data/2011_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
+
+demo_2012 <- read_xlsx("demo_data/Thesis_demographic_data/2012_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
+
+demo_2013 <- read_xlsx("demo_data/Thesis_demographic_data/2013_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
+
+demo_2014 <- read_xlsx("demo_data/Thesis_demographic_data/2014_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
+
+demo_2015 <- read_xlsx("demo_data/Thesis_demographic_data/2015_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
+
+demo_2002 <- demo_2002 %>% mutate(year = 2002)
+demo_2003 <- demo_2003 %>% mutate(year = 2003)
+demo_2004 <- demo_2004 %>% mutate(year = 2004)
+demo_2005 <- demo_2005 %>% mutate(year = 2005)
+demo_2006 <- demo_2006 %>% mutate(year = 2006)
+demo_2007 <- demo_2007 %>% mutate(year = 2007)
+demo_2008 <- demo_2008 %>% mutate(year = 2008)
+demo_2009 <- demo_2009 %>% mutate(year = 2009)
+demo_2010 <- demo_2010 %>% mutate(year = 2010)
+demo_2011 <- demo_2011 %>% mutate(year = 2011)
+demo_2012 <- demo_2012 %>% mutate(year = 2012)
+demo_2013 <- demo_2013 %>% mutate(year = 2013)
+demo_2014 <- demo_2014 %>% mutate(year = 2014)
+demo_2015 <- demo_2015 %>% mutate(year = 2015)
+
+```
+
+```{r combine_demo_data, echo=FALSE}
+# add datasets vertically 
+
+test <-bind_rows(demo_2002, demo_2003, demo_2004, demo_2005, demo_2006, demo_2007, demo_2008, demo_2009, demo_2010, demo_2011, demo_2012, demo_2013, demo_2014, demo_2015)
+
+
+```
+
+
