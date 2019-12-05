@@ -24,6 +24,7 @@ library(broom)
 library(plyr)
 library(ggridges)
 library(moderndive)
+library(data.table)
 library(tidyverse)
 ```
 
@@ -88,7 +89,7 @@ didreg_table <-gt(didreg_table)
 ```{r school_demo_data, echo=FALSE}
 
 
-demo_2002 <- read_xlsx("demo_data/Thesis_demographic_data/2002_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text") 
+demo_2002 <- read_xlsx("demo_data/Thesis_demographic_data/2002_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text") %>% clean_names()
 
 demo_2003 <- read_xlsx("demo_data/Thesis_demographic_data/2003_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
 
@@ -96,25 +97,25 @@ demo_2004 <- read_xlsx("demo_data/Thesis_demographic_data/2004_schooldemo.xlsx",
 
 demo_2005 <- read_xlsx("demo_data/Thesis_demographic_data/2005_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
 
-demo_2006 <- read_xlsx("demo_data/Thesis_demographic_data/2006_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
+demo_2006 <- read_xlsx("demo_data/Thesis_demographic_data/2006_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text") %>% clean_names()
 
-demo_2007 <- read_xlsx("demo_data/Thesis_demographic_data/2007_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
+demo_2007 <- read_xlsx("demo_data/Thesis_demographic_data/2007_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text") %>% clean_names()
 
-demo_2008 <- read_xlsx("demo_data/Thesis_demographic_data/2008_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
+demo_2008 <- read_xlsx("demo_data/Thesis_demographic_data/2008_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text") %>% clean_names()
 
-demo_2009 <- read_xlsx("demo_data/Thesis_demographic_data/2009_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
+demo_2009 <- read_xlsx("demo_data/Thesis_demographic_data/2009_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text") %>% clean_names()
 
-demo_2010 <- read_xlsx("demo_data/Thesis_demographic_data/2010_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
+demo_2010 <- read_xlsx("demo_data/Thesis_demographic_data/2010_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text") %>% clean_names()
 
-demo_2011 <- read_xlsx("demo_data/Thesis_demographic_data/2011_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
+demo_2011 <- read_xlsx("demo_data/Thesis_demographic_data/2011_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text") %>% clean_names()
 
-demo_2012 <- read_xlsx("demo_data/Thesis_demographic_data/2012_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
+demo_2012 <- read_xlsx("demo_data/Thesis_demographic_data/2012_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text") %>% clean_names()
 
-demo_2013 <- read_xlsx("demo_data/Thesis_demographic_data/2013_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
+demo_2013 <- read_xlsx("demo_data/Thesis_demographic_data/2013_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text") %>% clean_names()
 
-demo_2014 <- read_xlsx("demo_data/Thesis_demographic_data/2014_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
+demo_2014 <- read_xlsx("demo_data/Thesis_demographic_data/2014_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text") %>% clean_names()
 
-demo_2015 <- read_xlsx("demo_data/Thesis_demographic_data/2015_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
+demo_2015 <- read_xlsx("demo_data/Thesis_demographic_data/2015_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text") %>% clean_names()
 
 demo_2002 <- demo_2002 %>% mutate(year = 2002)
 demo_2003 <- demo_2003 %>% mutate(year = 2003)
@@ -138,7 +139,62 @@ demo_2015 <- demo_2015 %>% mutate(year = 2015)
 
 test <-bind_rows(demo_2002, demo_2003, demo_2004, demo_2005, demo_2006, demo_2007, demo_2008, demo_2009, demo_2010, demo_2011, demo_2012, demo_2013, demo_2014, demo_2015)
 
+test <- test %>% clean_names()
+
+for(i in 1:nrow(test)) {
+	if(is.na(test$school_name[i])) {
+		test$school_name[i] <- test$school[i]
+	}
+}
+
+for(i in 1:nrow(test)) {
+	if(is.na(test$school_name[i])) {
+		test$school_name[i] <- test$educational_unit[i]
+	}
+}
+
+for(i in 1:nrow(test)) {
+	if(is.na(test$school_name[i])) {
+		test$school_name[i] <- test$education_units[i]
+	}
+}
+
 
 ```
 
+```{r clean_col_labels, echo=FALSE}
+
+# started at 2006 to give six years of demographic data before the change was implemented in the 2012-ending year
+
+demo_2006 <- setnames(demo_2006, old = c('n','percent', 'n_1', 'percent_1', 'n_2', 'percent_2', 'n_3', 'percent_3', 'n_4', 'percent_4', 'n_5', 'percent_5', 'n_6', 'percent_6', 'n_7', 'percent_7', 'n_8', 'percent_8', 'n_9', 'percent_9', 'n_10', 'percent_10'), new = c('n_white','percent_white', 'n_afam', 'percent_afam', 'n_natam', 'percent_natam', 'n_asian', 'percent_asian', 'n_hisp', 'percent_hisp', 'n_multi', 'percent_multi', 'n_mexican', 'percent_mexican', 'n_pr', 'percent_pr', 'n_cuban', 'percent_cuban', 'n_otherhisp', 'percent_otherhisp', 'n_multihisp', 'percent_multihisp'))
+
+demo_2007 <- setnames(demo_2007, old = c('n','percent', 'n_1', 'percent_1', 'n_2', 'percent_2', 'n_3', 'percent_3', 'n_4', 'percent_4', 'n_5', 'percent_5', 'n_6', 'percent_6', 'n_7', 'percent_7', 'n_8', 'percent_8', 'n_9', 'percent_9', 'n_10', 'percent_10'), new = c('n_white','percent_white', 'n_afam', 'percent_afam', 'n_natam', 'percent_natam', 'n_asian', 'percent_asian', 'n_hisp', 'percent_hisp', 'n_multi', 'percent_multi', 'n_mexican', 'percent_mexican', 'n_pr', 'percent_pr', 'n_cuban', 'percent_cuban', 'n_otherhisp', 'percent_otherhisp', 'n_multihisp', 'percent_multihisp'))
+
+demo_2008 <- setnames(demo_2008, old = c('n','percent', 'n_1', 'percent_1', 'n_2', 'percent_2', 'n_3', 'percent_3', 'n_4', 'percent_4', 'n_5', 'percent_5', 'n_6', 'percent_6', 'n_7', 'percent_7', 'n_8', 'percent_8', 'n_9', 'percent_9', 'n_10', 'percent_10'), new = c('n_white','percent_white', 'n_afam', 'percent_afam', 'n_natam', 'percent_natam', 'n_asian', 'percent_asian', 'n_hisp', 'percent_hisp', 'n_multi', 'percent_multi', 'n_mexican', 'percent_mexican', 'n_pr', 'percent_pr', 'n_cuban', 'percent_cuban', 'n_otherhisp', 'percent_otherhisp', 'n_multihisp', 'percent_multihisp'))
+
+# only five racial categories for 2009 and 2010
+
+demo_2009 <- setnames(demo_2009, old = c('no','pct', 'no_1', 'pct_1', 'no_2', 'pct_2', 'no_3', 'pct_3', 'no_4', 'pct_4'), new = c('n_white','percent_white', 'n_afam', 'percent_afam', 'n_natam', 'percent_natam', 'n_asian', 'percent_asian', 'n_hisp', 'percent_hisp'))
+
+demo_2010 <- setnames(demo_2010, old = c('no','pct', 'no_1', 'pct_1', 'no_2', 'pct_2', 'no_3', 'pct_3', 'no_4', 'pct_4'), new = c('n_white','percent_white', 'n_afam', 'percent_afam', 'n_natam', 'percent_natam', 'n_asian', 'percent_asian', 'n_hisp', 'percent_hisp'))
+
+# for 2011-2015, they didn't input much for Asian and separated it into two categories: Asian and Hawaiian/Pacific Islander
+
+demo_2011 <- demo_2011 %>% select(-no_3, -pct_3) %>% setnames(old = c('no','pct', 'no_1', 'pct_1', 'no_2', 'pct_2','no_4', 'pct_4', 'no_5', 'pct_5', 'no_6', 'pct_6', 'no_7', 'pct_7', 'no_8', 'pct_8'), new = c('n_white','percent_white', 'n_afam', 'percent_afam', 'n_natam', 'percent_natam', 'n_hisp', 'percent_hisp', 'n_multi', 'percent_multi', 'n_asian', 'percent_asian', 'n_hawpac', 'percent_hawpac', 'n_na', 'percent_na'))
+
+# policy change should start to be measured here since it was implemented in August 2011, so first calendar year the policy was in effect is demo_2012
+
+demo_2012 <- demo_2012 %>% select(-no_3, -pct_3) %>% setnames(old = c('no','pct', 'no_1', 'pct_1', 'no_2', 'pct_2','no_4', 'pct_4', 'no_5', 'pct_5', 'no_6', 'pct_6', 'no_7', 'pct_7', 'no_8', 'pct_8'), new = c('n_white','percent_white', 'n_afam', 'percent_afam', 'n_natam', 'percent_natam', 'n_hisp', 'percent_hisp', 'n_multi', 'percent_multi', 'n_asian', 'percent_asian', 'n_hawpac', 'percent_hawpac', 'n_na', 'percent_na'))
+
+demo_2013 <- demo_2013 %>% select(-no_3, -pct_3) %>% setnames(old = c('no','pct', 'no_1', 'pct_1', 'no_2', 'pct_2','no_4', 'pct_4', 'no_5', 'pct_5', 'no_6', 'pct_6', 'no_7', 'pct_7', 'no_8', 'pct_8'), new = c('n_white','percent_white', 'n_afam', 'percent_afam', 'n_natam', 'percent_natam', 'n_hisp', 'percent_hisp', 'n_multi', 'percent_multi', 'n_asian', 'percent_asian', 'n_hawpac', 'percent_hawpac', 'n_na', 'percent_na'))
+
+demo_2014 <- demo_2014 %>% select(-no_3, -pct_3) %>% setnames(old = c('no','pct', 'no_1', 'pct_1', 'no_2', 'pct_2','no_4', 'pct_4', 'no_5', 'pct_5', 'no_6', 'pct_6', 'no_7', 'pct_7', 'no_8', 'pct_8'), new = c('n_white','percent_white', 'n_afam', 'percent_afam', 'n_natam', 'percent_natam', 'n_hisp', 'percent_hisp', 'n_multi', 'percent_multi', 'n_asian', 'percent_asian', 'n_hawpac', 'percent_hawpac', 'n_na', 'percent_na'))
+
+demo_2015 <- demo_2015 %>% select(-no_3, -pct_3) %>% setnames(old = c('no','pct', 'no_1', 'pct_1', 'no_2', 'pct_2','no_4', 'pct_4', 'no_5', 'pct_5', 'no_6', 'pct_6', 'no_7', 'pct_7', 'no_8', 'pct_8'), new = c('n_white','percent_white', 'n_afam', 'percent_afam', 'n_natam', 'percent_natam', 'n_hisp', 'percent_hisp', 'n_multi', 'percent_multi', 'n_asian', 'percent_asian', 'n_hawpac', 'percent_hawpac', 'n_na', 'percent_na'))
+
+test1 <-bind_rows(demo_2006, demo_2007, demo_2008, demo_2009, demo_2010, demo_2011, demo_2012, demo_2013, demo_2014, demo_2015)
+
+#make sure order of commands is in order in order for these results to be replicated after cleaning the environment
+
+```
 
