@@ -73,8 +73,9 @@ didreg = lm(new_composite_12 ~ se + policy_year + did, data = y)
 
 # plot parallel slopes for SE and non-SE schools
 
-ggplot(y, aes(year, new_composite_12, group = se, color = se)) +
+plot <- ggplot(y, aes(year, new_composite_12, group = se, color = se)) +
   stat_summary(geom = 'line') +
+   scale_x_continuous(breaks = 0:2100) +
     geom_vline(xintercept = 2011) +
     theme_minimal()
 
@@ -86,6 +87,7 @@ didreg_table <- get_regression_table(didreg, digits = 3)
 didreg_table <-gt(didreg_table)
 
 ```
+
 ```{r school_demo_data, echo=FALSE}
 
 
@@ -196,5 +198,163 @@ test1 <-bind_rows(demo_2006, demo_2007, demo_2008, demo_2009, demo_2010, demo_20
 
 #make sure order of commands is in order in order for these results to be replicated after cleaning the environment
 
+test1 <- test1 %>% clean_names()
+
+
+
+for(i in 1:nrow(test1)) {
+	if(is.na(test1$school[i])) {
+		test1$school[i] <- test1$educational_unit[i]
+	}
+}
+
+for(i in 1:nrow(test1)) {
+	if(is.na(test1$school[i])) {
+		test1$school[i] <- test1$education_units[i]
+	}
+}
+
+# after changing all school names to school name column, there were still 14 NA values/rows that do not correspond to a single school
+
+sum(is.na(test1$school))
+
+test_na <- test1 %>% filter(is.na(school))
+
+# filtering those values out (as well as any missing race values), so only ones with school names present remain
+
+test1 <- test1 %>% filter(!is.na(school)) %>% filter(!is.na(n_white)) %>% filter(!is.na(n_afam)) %>% filter(!is.na(n_natam)) %>% filter(!is.na(n_asian)) %>% filter(!is.na(n_hisp))
+
+
+```
+
+```{r}
+se_elem_lower <- c("beasley", "beaubien", "bell", "carnegie", "coonley", "edison", "keller", "lenart", "mcpherson", "national teachers", "pritzker", "greeley", "orozco", "pulaski", "bronzeville", "decatur", "mcdade", "poe", "skinner", "skinner north")
+
+
+se_schools_demo_list <- test1 %>% 
+  filter(str_detect(tolower(school), paste(se_elem_lower, collapse = "|"))) %>% pull(school)
+
+# took out the vandepoel from this list because the original vector mistakenly filtered for this via "poe"
+
+se_schools_demo_list_1 <- test1 %>% 
+  filter(str_detect(tolower(school), paste(se_elem_lower, collapse = "|"))) %>% filter(school != "Vanderpoel Magnet") %>% filter(school != "John H Vanderpoel Elementary Magnet School") %>% filter(school != "VANDERPOEL") %>% pull(school)
+
+x <- test1 %>% 
+  mutate(policy_year = ifelse(year > 2011, 1, 0)) %>% 
+  mutate(se_elem = ifelse(school %in% se_schools_demo_list_1, 1, 0)) %>% 
+  mutate(did = policy_year * se_elem)
+
+# Estimating the DID estimator:
+
+# unlisted the n_white variable in order to make it a numeric variable 
+
+x$n_white <- unlist(x$n_white)
+x$n_white <- as.numeric(x$n_white)
+x$percent_white <- unlist(x$percent_white)
+x$percent_white <- as.numeric(x$percent_white)
+
+x$n_afam <- unlist(x$n_afam)
+x$n_afam <- as.numeric(x$n_afam)
+x$percent_afam <- unlist(x$percent_afam)
+x$percent_afam <- as.numeric(x$percent_afam)
+
+x$percent_natam <- unlist(x$percent_natam)
+x$percent_natam <- as.numeric(x$percent_natam)
+
+x$percent_asian <- unlist(x$percent_asian)
+x$percent_asian <- as.numeric(x$percent_asian)
+
+x$percent_hisp <- unlist(x$percent_hisp)
+x$percent_hisp <- as.numeric(x$percent_hisp)
+
+# doesn't really work to unlist a whole dataframe
+x_unlisted <- unlist(x)
+x_num <- as.numeric(x_unlisted)
+
+# did regression
+didreg2 = lm(n_white ~ se_elem + policy_year + did, data = x)
+didreg2_1 = lm(percent_white ~ se_elem + policy_year + did, data = x)
+
+didreg3 = lm(n_afam ~ se_elem + policy_year + did, data = x)
+
+didreg4 = lm(n_natam ~ se_elem + policy_year + did, data = x)
+
+didreg5 = lm(n_asian ~ se_elem + policy_year + did, data = x)
+
+didreg6 = lm(n_hisp ~ se_elem + policy_year + did, data = x)
+
+# plot parallel slopes for SE and non-SE schools in terms of white demographic
+
+plot2 <- ggplot(x, aes(year, n_white, group = se_elem, color = se_elem)) +
+  stat_summary(geom = 'line') +
+   scale_x_continuous(breaks = 0:2100) +
+    geom_vline(xintercept = 2011) +
+    theme_minimal()
+
+plot2_1 <- ggplot(x, aes(year, percent_white, group = se_elem, color = se_elem)) +
+  stat_summary(geom = 'line') +
+   scale_x_continuous(breaks = 0:2100) +
+    geom_vline(xintercept = 2011) +
+    theme_minimal()
+
+# percent Afam by se_elem
+
+plot3 <- ggplot(x, aes(year, percent_afam, group = se_elem, color = se_elem)) +
+  stat_summary(geom = 'line') +
+   scale_x_continuous(breaks = 0:2100) +
+    geom_vline(xintercept = 2011) +
+    theme_minimal()
+
+# percent Native American
+
+plot4 <- ggplot(x, aes(year, percent_natam, group = se_elem, color = se_elem)) +
+  stat_summary(geom = 'line') +
+   scale_x_continuous(breaks = 0:2100) +
+    geom_vline(xintercept = 2011) +
+    theme_minimal()
+
+# percent Asian
+
+plot5 <- ggplot(x, aes(year, percent_asian, group = se_elem, color = se_elem)) +
+  stat_summary(geom = 'line') +
+   scale_x_continuous(breaks = 0:2100) +
+    geom_vline(xintercept = 2011) +
+    theme_minimal()
+
+# percent Hispanic
+
+plot6 <- ggplot(x, aes(year, percent_hisp, group = se_elem, color = se_elem)) +
+  stat_summary(geom = 'line') +
+   scale_x_continuous(breaks = 0:2100) +
+    geom_vline(xintercept = 2011) +
+    theme_minimal()
+
+# get regression outputs in a table
+summary(didreg2)
+summary(didreg3)
+
+didreg_table2 <- get_regression_table(didreg2, digits = 3)
+
+didreg_table2 <-gt(didreg_table2)
+
+
+
+## Erroneous code ##
+
+# probably not necessarily
+se_schools_demo <- se_schools_demo %>% 
+   mutate(policy_year = ifelse(year > 2011, 1, 0))
+
+#doesn't work
+se_schools_demo <- se_schools_demo %>% 
+  group_by(str_detect(tolower(school)))
+           
+           
+# facet wrap by school? maybe skip the plot visualization
+demo_plot <- ggplot(se_schools_demo, aes(year, n_white, group= school, color=school)) +
+  geom_point() +
+  theme_minimal() 
+
+demo_plot
 ```
 
