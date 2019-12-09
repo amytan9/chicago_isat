@@ -276,12 +276,16 @@ didreg2 = lm(n_white ~ se_elem + policy_year + did, data = x)
 didreg2_1 = lm(percent_white ~ se_elem + policy_year + did, data = x)
 
 didreg3 = lm(n_afam ~ se_elem + policy_year + did, data = x)
+didreg3_1 = lm(percent_afam ~ se_elem + policy_year + did, data = x)
 
 didreg4 = lm(n_natam ~ se_elem + policy_year + did, data = x)
+didreg4_1 = lm(percent_natam ~ se_elem + policy_year + did, data = x)
 
 didreg5 = lm(n_asian ~ se_elem + policy_year + did, data = x)
+didreg5_1 = lm(percent_asian ~ se_elem + policy_year + did, data = x)
 
 didreg6 = lm(n_hisp ~ se_elem + policy_year + did, data = x)
+didreg6_1 = lm(percent_hisp ~ se_elem + policy_year + did, data = x)
 
 # plot parallel slopes for SE and non-SE schools in terms of white demographic
 
