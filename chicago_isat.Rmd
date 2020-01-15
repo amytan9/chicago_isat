@@ -196,11 +196,9 @@ demo_2015 <- demo_2015 %>% select(-no_3, -pct_3) %>% setnames(old = c('no','pct'
 
 test1 <-bind_rows(demo_2006, demo_2007, demo_2008, demo_2009, demo_2010, demo_2011, demo_2012, demo_2013, demo_2014, demo_2015)
 
-#make sure order of commands is in order in order for these results to be replicated after cleaning the environment
+# make sure order of commands is in order, in order for these results to be replicated after cleaning the environment
 
 test1 <- test1 %>% clean_names()
-
-
 
 for(i in 1:nrow(test1)) {
 	if(is.na(test1$school[i])) {
@@ -223,7 +221,6 @@ test_na <- test1 %>% filter(is.na(school))
 # filtering those values out (as well as any missing race values), so only ones with school names present remain
 
 test1 <- test1 %>% filter(!is.na(school)) %>% filter(!is.na(n_white)) %>% filter(!is.na(n_afam)) %>% filter(!is.na(n_natam)) %>% filter(!is.na(n_asian)) %>% filter(!is.na(n_hisp))
-
 
 ```
 
@@ -274,6 +271,10 @@ x_num <- as.numeric(x_unlisted)
 # did regression
 didreg2 = lm(n_white ~ se_elem + policy_year + did, data = x)
 didreg2_1 = lm(percent_white ~ se_elem + policy_year + did, data = x)
+
+### slope test for the two lines 
+slope_text <- lm(percent_white ~ se_elem*year, data = filter(x, policy_year == 0))
+
 
 didreg3 = lm(n_afam ~ se_elem + policy_year + did, data = x)
 didreg3_1 = lm(percent_afam ~ se_elem + policy_year + did, data = x)
@@ -360,5 +361,60 @@ demo_plot <- ggplot(se_schools_demo, aes(year, n_white, group= school, color=sch
   theme_minimal() 
 
 demo_plot
+```
+
+```{r}
+iep_2015 <- read_xlsx("demo_data/chicago_isat_iep_data/iepdata_2015.xlsx", skip = 1, col_names = TRUE, col_types = "text") %>% clean_names()
+
+iep_2014 <- read_xlsx("demo_data/chicago_isat_iep_data/iepdata_2014.xlsx", skip = 1, col_names = TRUE, col_types = "text") %>% clean_names()
+
+iep_2013 <- read_xlsx("demo_data/chicago_isat_iep_data/iepdata_2013.xlsx", skip = 1, col_names = TRUE, col_types = "text") %>% clean_names()
+
+iep_2012 <- read_xlsx("demo_data/chicago_isat_iep_data/iepdata_2012.xlsx", skip = 1, col_names = TRUE, col_types = "text") %>% clean_names()
+
+iep_2011 <- read_xlsx("demo_data/chicago_isat_iep_data/iepdata_2011.xlsx", skip = 1, col_names = TRUE, col_types = "text") %>% clean_names()
+
+iep_2010 <- read_xlsx("demo_data/chicago_isat_iep_data/iepdata_2010.xlsx", skip = 1, col_names = TRUE, col_types = "text") %>% clean_names()
+
+iep_2015 <- iep_2015 %>% mutate(year = 2015)
+iep_2014 <- iep_2014 %>% mutate(year = 2014)
+iep_2013 <- iep_2013 %>% mutate(year = 2013)
+iep_2012 <- iep_2012 %>% mutate(year = 2012)
+iep_2011 <- iep_2011 %>% mutate(year = 2011)
+iep_2010 <- iep_2010 %>% mutate(year = 2010)
+```
+
+```{r}
+
+# combining iep data vertically
+
+iep_comb <-bind_rows(iep_2015, iep_2014, iep_2013, iep_2012, iep_2011, iep_2010)
+
+# putting all school names into one column
+
+for(i in 1:nrow(iep_comb)) {
+	if(is.na(iep_comb$school_name[i])) {
+		iep_comb$school_name[i] <- iep_comb$educational_unit_name[i]
+	}
+}
+
+for(i in 1:nrow(iep_comb)) {
+	if(is.na(iep_comb$school_name[i])) {
+		iep_comb$school_name[i] <- iep_comb$school[i]
+	}
+}
+
+# seeing what rows still do not have a school name attached
+
+iep_na <- iep_comb %>% filter(is.na(school_name))
+view(iep_na)
+
+# figured out that these NAs are just district or summary totals, so do not need these rows
+# filtering those values out (as well as any missing race values), so only ones with school names present remain
+
+iep_comb <- iep_comb %>% filter(!is.na(school_name))
+
+# decided to keep rows with NA values for any of the 3 variables because they have data for other variables
+
 ```
 
