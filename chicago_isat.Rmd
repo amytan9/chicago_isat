@@ -68,7 +68,7 @@ y <- y %>% mutate(did = se * policy_year)
 y$new_composite_12 <- unlist(y$composite_12)
 y$new_composite_12 <- as.numeric(y$new_composite_12)
 
-# did regression
+# did regression for composite test scores
 didreg = lm(new_composite_12 ~ se + policy_year + did, data = y)
 
 # plot parallel slopes for SE and non-SE schools
@@ -272,7 +272,7 @@ x_num <- as.numeric(x_unlisted)
 didreg2 = lm(n_white ~ se_elem + policy_year + did, data = x)
 didreg2_1 = lm(percent_white ~ se_elem + policy_year + did, data = x)
 
-### slope test for the two lines 
+### slope test for the two lines (written with Robert)
 slope_text <- lm(percent_white ~ se_elem*year, data = filter(x, policy_year == 0))
 
 
@@ -364,6 +364,27 @@ demo_plot
 ```
 
 ```{r}
+# time trends
+
+### slope test for the two lines before policy change
+slope_test <- lm(percent_white ~ se_elem*year, data = filter(x, policy_year == 0))
+slope_test1 <- lm(percent_afam ~ se_elem*year, data = filter(x, policy_year == 0))
+slope_test2 <- lm(percent_natam ~ se_elem*year, data = filter(x, policy_year == 0))
+slope_test3 <- lm(percent_asian ~ se_elem*year, data = filter(x, policy_year == 0))
+slope_test4 <- lm(percent_hisp ~ se_elem*year, data = filter(x, policy_year == 0))
+
+# should probably put this later since HHI is coded in a later chunk
+slope_test5 <- lm(hhi ~ se_elem*year, data = filter(x, policy_year == 0))
+
+# do for every slope test to see which was significant
+summary(slope_test) 
+
+# slope test 0 had significance for se*year
+# slope tests 2 and 4 had significance for year
+
+```
+
+```{r}
 iep_2015 <- read_xlsx("demo_data/chicago_isat_iep_data/iepdata_2015.xlsx", skip = 1, col_names = TRUE, col_types = "text") %>% clean_names()
 
 iep_2014 <- read_xlsx("demo_data/chicago_isat_iep_data/iepdata_2014.xlsx", skip = 1, col_names = TRUE, col_types = "text") %>% clean_names()
@@ -416,5 +437,104 @@ iep_comb <- iep_comb %>% filter(!is.na(school_name))
 
 # decided to keep rows with NA values for any of the 3 variables because they have data for other variables
 
+```
+
+```{r}
+# adding in dummy variables for policy year and selective enrollment elementary schools 
+
+se_elem_lower <- c("beasley", "beaubien", "bell", "carnegie", "coonley", "edison", "keller", "lenart", "mcpherson", "national teachers", "pritzker", "greeley", "orozco", "pulaski", "bronzeville", "decatur", "mcdade", "poe", "skinner", "skinner north")
+
+# made a new list that tracks all schools with the key words above
+
+se_schools_demo_list2 <- iep_comb %>% 
+  filter(str_detect(tolower(school_name), paste(se_elem_lower, collapse = "|"))) %>%
+  filter(school_name != "Vanderpoel Magnet") %>%
+  filter(school_name != "John H Vanderpoel Elementary Magnet School") %>%
+  filter(school_name != "VANDERPOEL") %>%
+  filter(school_name != "Noble Street Charter - Pritzker College Prep") %>% 
+  filter(school_name != "Bronzeville Scholastic Academy High School") %>%
+  filter(school_name != "Urban Prep Academy for Young Men - Bronzeville") %>% 
+  filter(school_name != "Isabelle C O'Keeffe Elementary School") %>% 
+  filter(school_name != "LEARN Charter ES - Charles and Dorothy Campbell") %>% 
+  filter(school_name != "Bronzeville Mil HS") %>% 
+  filter(school_name != "Edison Park Elementary School") %>% 
+  filter(school_name != "Edison Park") %>% 
+  pull(school_name)
+
+# took out schools from this list that were not supposed to be included in the selective enrollment schools list because the original vector mistakenly filtered for them
+
+# checked that there were ~120 observations for 20 SE schools with 6 years of data
+# there is 118 because National Teachers Academy does not have data for 2010 and 2011
+
+iep_comb %>% filter(se_elem == 1) %>% nrow()
+
+iep_comb <- iep_comb %>% 
+  mutate(policy_year = ifelse(year > 2011, 1, 0)) %>% 
+  mutate(se_elem = ifelse(school_name %in% se_schools_demo_list2, 1, 0)) %>% 
+  mutate(did = policy_year * se_elem)
+
+iep_comb <- setnames(iep_comb, old = c('n','percent', 'n_1', 'percent_1', 'n_2', 'percent_2'), new = c('n_bil','percent_bil', 'n_iep', 'percent_iep', 'n_free', 'percent_free'))
+
+# regression for bilingualism as a dependent variable 
+
+iep_reg1 = lm(percent_bil ~ se_elem + policy_year + did, data = iep_comb)
+summary(iep_reg1)
+
+# regression for special ed as a dependent variable
+
+iep_reg2 = lm(percent_iep ~ se_elem + policy_year + did, data = iep_comb)
+summary(iep_reg2)
+
+# regression for free or reduced lunch as a dependent variable
+
+iep_reg3 = lm(percent_free ~ se_elem + policy_year + did, data = iep_comb)
+summary(iep_reg3)
+
+# plots of each variable as dependent variables (WHY are there so many y-values?)
+
+plot_bil <- ggplot(iep_comb, aes(year, percent_bil, group = se_elem, color = se_elem)) +
+  stat_summary(fun.y = mean, geom = 'line') +
+   scale_x_continuous(breaks = 0:2100) +
+    geom_vline(xintercept = 2011) +
+    theme_minimal()
+
+plot_iep <- ggplot(iep_comb, aes(year, percent_iep, group = se_elem, color = se_elem)) +
+  stat_summary(fun.y = mean, geom = 'line') +
+   scale_x_continuous(breaks = 0:2100) +
+    geom_vline(xintercept = 2011) +
+    theme_minimal()
+
+plot_free <- ggplot(iep_comb, aes(year, percent_free, group = se_elem, color = se_elem)) +
+  stat_summary(geom = 'line') +
+   scale_x_continuous(breaks = 0:2100) +
+    geom_vline(xintercept = 2011) +
+    theme_minimal()
+
+```
+
+```{r}
+# making bilingualism a control variable (as an example)
+
+# example regression for adding control variable at the school level, after x and iep_comb have been merged
+
+examplereg = lm(hhi ~ se_elem + policy_year + did + percent_bil, data = x)
+
+# old regression from above for test scores (might be useful)
+didreg = lm(new_composite_12 ~ se + policy_year + did, data = y)
+```
+
+
+```{r}
+# adding in Herfindahl-Hirschman Index for race column- a measure of overall diversity
+
+x <- x %>% mutate(hhi = ((percent_white/100)^2 + (percent_afam/100)^2 + (percent_asian/100)^2 + (percent_hisp/100)^2 + (percent_natam/100)^2))
+
+reg_hhi = lm(hhi ~ se_elem + policy_year + did, data = x)
+
+plot_hhi <- ggplot(x, aes(year, hhi, group = se_elem, color = se_elem)) +
+  stat_summary(geom = 'line') +
+   scale_x_continuous(breaks = 0:2100) +
+    geom_vline(xintercept = 2011) +
+    theme_minimal()
 ```
 
