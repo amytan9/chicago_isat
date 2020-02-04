@@ -25,6 +25,8 @@ library(plyr)
 library(ggridges)
 library(moderndive)
 library(data.table)
+library(ggthemes)
+library(gridExtra)
 library(tidyverse)
 ```
 
@@ -632,7 +634,7 @@ plot_test_bell <- ggplot(data=subset(x, school== "Bell"), aes(year, new_composit
 
 
 ```
-```{r}
+
 ```{r merge}
 
 # merging the iep_comb and x datasets to combine info about three student demographics + racial/test score info (respectively) 
@@ -651,30 +653,48 @@ county.graph <- function(df, na.rm = TRUE, ...){
   
   se_school_ids <- c("610246", "609796", "609799", "609837", "609866", "609794", "610084", "610298", "610070", "610231", "610229", "609850", "610329", "610138", "400019", "609880", "610066", "610132", "610177", "610534")
 
+  #plotlist = list()
+  #n <- 100
 for (i in seq_along(se_school_ids)) { # Loop over loop.vector
   
    plot <- 
       ggplot(subset(df, df$school_id==se_school_ids[i]),
              aes(year, percent_white, group = school_id)) + 
-      
       geom_line(size=2) +
-      #facet_wrap( ~  category, ncol=2) +
-      
-      #theme_pander() +
+      facet_wrap( ~  school_id, ncol=5, nrow = 4) +
+      geom_vline(xintercept = 2011) +
+      theme_pander() +
       theme(legend.position="none") + 
       
-      #scale_y_continuous("County Population within Age Categories (thousands)", 
-                         #limits=c(0, max(df$value[df$County==county_list[i]]))/1000) +
-      #scale_x_continuous("Year") +
+      scale_y_continuous("Percent White") +
+      scale_x_continuous("Year", breaks = 0:2100) +
       
-      ggtitle(paste(se_school_ids[i], ' County, New Jersey \n', 
+      ggtitle(paste('School: ', se_elem_upper_2[i],', Chicago, IL \n', 
                     "County Population Projection within Age Categories (thousands) \n",
                     sep=''))
+      ggsave(plot, file=paste0("plot_", i, 
+                         # 'projection_graphs/percentwhite_graphs/',
+                        #  se_school_ids[i], 
+                        ".png", sep=''), scale=2)
+      
+     
+      # plotlist[[i]] = p
    print(plot)
 }
 }
 
+
+# using function on the master.long dataset
+
 county.graph(master.long)
+
+p <- grid.arrange(grobs=plotlist, ncol=6)
+ggsave("bigplot.png",p)
+
+plot_1 <- system.file("plot_1.png", package = "cowplot")
+plot_2 <- system.file("extdata", "plot_2.png", package = "cowplot")
+
+plot_grid(plot_1,plot_2, labels = c('A', 'B'), label_size = 10)
 ```
 
 
