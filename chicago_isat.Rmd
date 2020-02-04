@@ -27,6 +27,7 @@ library(moderndive)
 library(data.table)
 library(ggthemes)
 library(gridExtra)
+library(ggplot2)
 library(tidyverse)
 ```
 
@@ -42,6 +43,7 @@ library(tidyverse)
 sheets_deauth()
 
 # reading in ISAT data via google sheets
+
 y <- read_sheet("1aosXO1LMDHl9KMCZvPp4tinTRy3-84FBOfht2xcurBo", skip = 1)
 
 y <- y %>% clean_names() 
@@ -65,17 +67,19 @@ y <- y %>% mutate(did = se * policy_year)
 
 # Estimating the DID estimator:
 
-# unlisted the composite_12 variable in order to make it a numeric variable 
+# using the composite_16 variable since that is the measure of percent of students who exceed ISBE standards
 
-y$new_composite_12 <- unlist(y$composite_12)
-y$new_composite_12 <- as.numeric(y$new_composite_12)
+# unlisted the composite_16 variable in order to make it a numeric variable 
+
+y$new_composite_16 <- unlist(y$composite_16)
+y$new_composite_16 <- as.numeric(y$new_composite_16)
 
 # did regression for composite test scores
-didreg = lm(new_composite_12 ~ se + policy_year + did, data = y)
+didreg = lm(new_composite_16 ~ se + policy_year + did, data = y)
 
 # plot parallel slopes for SE and non-SE schools
 
-plot <- ggplot(y, aes(year, new_composite_12, group = se, color = se)) +
+score_plot <- ggplot(y, aes(year, new_composite_16, group = se, color = se)) +
   stat_summary(geom = 'line') +
    scale_x_continuous(breaks = 0:2100) +
     geom_vline(xintercept = 2011) +
@@ -93,13 +97,13 @@ didreg_table <-gt(didreg_table)
 ```{r school_demo_data, echo=FALSE}
 
 
-demo_2002 <- read_xlsx("demo_data/Thesis_demographic_data/2002_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text") %>% clean_names()
+#demo_2002 <- read_xlsx("demo_data/Thesis_demographic_data/2002_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text") %>% clean_names()
 
-demo_2003 <- read_xlsx("demo_data/Thesis_demographic_data/2003_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
+#demo_2003 <- read_xlsx("demo_data/Thesis_demographic_data/2003_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
 
-demo_2004 <- read_xlsx("demo_data/Thesis_demographic_data/2004_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
+#demo_2004 <- read_xlsx("demo_data/Thesis_demographic_data/2004_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
 
-demo_2005 <- read_xlsx("demo_data/Thesis_demographic_data/2005_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
+#demo_2005 <- read_xlsx("demo_data/Thesis_demographic_data/2005_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
 
 demo_2006 <- read_xlsx("demo_data/Thesis_demographic_data/2006_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text") %>% clean_names()
 
@@ -121,10 +125,10 @@ demo_2014 <- read_xlsx("demo_data/Thesis_demographic_data/2014_schooldemo.xlsx",
 
 demo_2015 <- read_xlsx("demo_data/Thesis_demographic_data/2015_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text") %>% clean_names()
 
-demo_2002 <- demo_2002 %>% mutate(year = 2002)
-demo_2003 <- demo_2003 %>% mutate(year = 2003)
-demo_2004 <- demo_2004 %>% mutate(year = 2004)
-demo_2005 <- demo_2005 %>% mutate(year = 2005)
+#demo_2002 <- demo_2002 %>% mutate(year = 2002)
+#demo_2003 <- demo_2003 %>% mutate(year = 2003)
+#demo_2004 <- demo_2004 %>% mutate(year = 2004)
+#demo_2005 <- demo_2005 %>% mutate(year = 2005)
 demo_2006 <- demo_2006 %>% mutate(year = 2006)
 demo_2007 <- demo_2007 %>% mutate(year = 2007)
 demo_2008 <- demo_2008 %>% mutate(year = 2008)
@@ -139,9 +143,10 @@ demo_2015 <- demo_2015 %>% mutate(year = 2015)
 ```
 
 ```{r combine_demo_data, echo=FALSE}
-# add datasets vertically 
+# add datasets vertically as a test
+# MAYBE TAKE THIS CHUNK OUT, replicated later with test1
 
-test <-bind_rows(demo_2002, demo_2003, demo_2004, demo_2005, demo_2006, demo_2007, demo_2008, demo_2009, demo_2010, demo_2011, demo_2012, demo_2013, demo_2014, demo_2015)
+test <-bind_rows(demo_2006, demo_2007, demo_2008, demo_2009, demo_2010, demo_2011, demo_2012, demo_2013, demo_2014, demo_2015)
 
 test <- test %>% clean_names()
 
@@ -168,7 +173,7 @@ for(i in 1:nrow(test)) {
 
 ```{r clean_col_labels, echo=FALSE}
 
-# started at 2006 to give six years of demographic data before the change was implemented in the 2012-ending year
+# started at 2006 to give five years of demographic data before the change was implemented in the 2011-ending year
 
 demo_2006 <- setnames(demo_2006, old = c('n','percent', 'n_1', 'percent_1', 'n_2', 'percent_2', 'n_3', 'percent_3', 'n_4', 'percent_4', 'n_5', 'percent_5', 'n_6', 'percent_6', 'n_7', 'percent_7', 'n_8', 'percent_8', 'n_9', 'percent_9', 'n_10', 'percent_10'), new = c('n_white','percent_white', 'n_afam', 'percent_afam', 'n_natam', 'percent_natam', 'n_asian', 'percent_asian', 'n_hisp', 'percent_hisp', 'n_multi', 'percent_multi', 'n_mexican', 'percent_mexican', 'n_pr', 'percent_pr', 'n_cuban', 'percent_cuban', 'n_otherhisp', 'percent_otherhisp', 'n_multihisp', 'percent_multihisp'))
 
@@ -184,9 +189,9 @@ demo_2010 <- setnames(demo_2010, old = c('no','pct', 'no_1', 'pct_1', 'no_2', 'p
 
 # for 2011-2015, they didn't input much for Asian and separated it into two categories: Asian and Hawaiian/Pacific Islander
 
-demo_2011 <- demo_2011 %>% select(-no_3, -pct_3) %>% setnames(old = c('no','pct', 'no_1', 'pct_1', 'no_2', 'pct_2','no_4', 'pct_4', 'no_5', 'pct_5', 'no_6', 'pct_6', 'no_7', 'pct_7', 'no_8', 'pct_8'), new = c('n_white','percent_white', 'n_afam', 'percent_afam', 'n_natam', 'percent_natam', 'n_hisp', 'percent_hisp', 'n_multi', 'percent_multi', 'n_asian', 'percent_asian', 'n_hawpac', 'percent_hawpac', 'n_na', 'percent_na'))
+# policy change should start to be measured here since it was implemented in its first trial year in 2010-2011, so first calendar year the policy was in effect is demo_2011
 
-# policy change should start to be measured here since it was implemented in August 2011, so first calendar year the policy was in effect is demo_2012
+demo_2011 <- demo_2011 %>% select(-no_3, -pct_3) %>% setnames(old = c('no','pct', 'no_1', 'pct_1', 'no_2', 'pct_2','no_4', 'pct_4', 'no_5', 'pct_5', 'no_6', 'pct_6', 'no_7', 'pct_7', 'no_8', 'pct_8'), new = c('n_white','percent_white', 'n_afam', 'percent_afam', 'n_natam', 'percent_natam', 'n_hisp', 'percent_hisp', 'n_multi', 'percent_multi', 'n_asian', 'percent_asian', 'n_hawpac', 'percent_hawpac', 'n_na', 'percent_na'))
 
 demo_2012 <- demo_2012 %>% select(-no_3, -pct_3) %>% setnames(old = c('no','pct', 'no_1', 'pct_1', 'no_2', 'pct_2','no_4', 'pct_4', 'no_5', 'pct_5', 'no_6', 'pct_6', 'no_7', 'pct_7', 'no_8', 'pct_8'), new = c('n_white','percent_white', 'n_afam', 'percent_afam', 'n_natam', 'percent_natam', 'n_hisp', 'percent_hisp', 'n_multi', 'percent_multi', 'n_asian', 'percent_asian', 'n_hawpac', 'percent_hawpac', 'n_na', 'percent_na'))
 
@@ -195,8 +200,6 @@ demo_2013 <- demo_2013 %>% select(-no_3, -pct_3) %>% setnames(old = c('no','pct'
 demo_2014 <- demo_2014 %>% select(-no_3, -pct_3) %>% setnames(old = c('no','pct', 'no_1', 'pct_1', 'no_2', 'pct_2','no_4', 'pct_4', 'no_5', 'pct_5', 'no_6', 'pct_6', 'no_7', 'pct_7', 'no_8', 'pct_8'), new = c('n_white','percent_white', 'n_afam', 'percent_afam', 'n_natam', 'percent_natam', 'n_hisp', 'percent_hisp', 'n_multi', 'percent_multi', 'n_asian', 'percent_asian', 'n_hawpac', 'percent_hawpac', 'n_na', 'percent_na'))
 
 demo_2015 <- demo_2015 %>% select(-no_3, -pct_3) %>% setnames(old = c('no','pct', 'no_1', 'pct_1', 'no_2', 'pct_2','no_4', 'pct_4', 'no_5', 'pct_5', 'no_6', 'pct_6', 'no_7', 'pct_7', 'no_8', 'pct_8'), new = c('n_white','percent_white', 'n_afam', 'percent_afam', 'n_natam', 'percent_natam', 'n_hisp', 'percent_hisp', 'n_multi', 'percent_multi', 'n_asian', 'percent_asian', 'n_hawpac', 'percent_hawpac', 'n_na', 'percent_na'))
-
-
 
 
 test1 <-bind_rows(demo_2006, demo_2007, demo_2008, demo_2009, demo_2010, demo_2011, demo_2012, demo_2013, demo_2014, demo_2015)
@@ -229,47 +232,54 @@ test1 <- test1 %>% filter(!is.na(school)) %>% filter(!is.na(n_white)) %>% filter
 
 ```
 
+<!-- ```{r} -->
+<!-- # making a new column that combines asian and hawpac for datasets with them -->
+<!-- # demographic data from years 2011-2015 have hawpac -->
+<!-- # use n_api and percent_api for all subsequent measures that include Asians -->
+<!-- # don't use this for now, check to see if new hhi is ok -->
+
+<!-- test1 <- test1 %>% -->
+<!--   mutate(n_api = n_asian + n_hawpac) %>% -->
+<!--   mutate(percent_api = n_api/total) -->
+
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- # prob don't need this anymore, old method of filtering for SE schools not using school IDs -->
+
+<!-- se_elem_lower <- c("beasley", "beaubien", "bell", "carnegie", "coonley", "edison", "keller", "lenart", "mcpherson", "national teachers", "pritzker", "greeley", "orozco", "pulaski", "bronzeville", "decatur", "mcdade", "poe", "skinner", "skinner north") -->
+
+
+<!-- se_schools_demo_list <- test1 %>%  -->
+<!--   filter(str_detect(tolower(school), paste(se_elem_lower, collapse = "|"))) %>% pull(school) -->
+
+<!-- # took out the vandepoel from this list because the original vector mistakenly filtered for this via "poe" -->
+
+<!-- se_schools_demo_list_1 <- test1 %>%  -->
+<!--   filter(str_detect(tolower(school), paste(se_elem_lower, collapse = "|"))) %>% -->
+<!--   filter(school != "Vanderpoel Magnet") %>% -->
+<!--   filter(school != "John H Vanderpoel Elementary Magnet School") %>% -->
+<!--   filter(school != "VANDERPOEL") %>% -->
+<!--    filter(school != "Noble Street Charter - Pritzker College Prep") %>%  -->
+<!--   filter(school != "Bronzeville Scholastic Academy High School") %>% -->
+<!--   filter(school != "Urban Prep Academy for Young Men - Bronzeville") %>%  -->
+<!--   filter(school != "Isabelle C O'Keeffe Elementary School") %>%  -->
+<!--   filter(school != "LEARN Charter ES - Charles and Dorothy Campbell") %>%  -->
+<!--   filter(school != "Bronzeville Mil HS") %>%  -->
+<!--   filter(school != "Edison Park Elementary School") %>%  -->
+<!--   filter(school != "Edison Park") %>% -->
+<!--   filter(school != "Beasley CPC") %>%  -->
+<!--   filter(school != "LEARN CHTR - CAMPBELL") %>%  -->
+<!--   pull(school) -->
+
+<!-- x <- test1 %>%  -->
+<!--   mutate(policy_year = ifelse(year > 2011, 1, 0)) %>%  -->
+<!--   mutate(se_elem = ifelse(school %in% se_schools_demo_list_1, 1, 0)) %>%  -->
+<!--   mutate(did = policy_year * se_elem) -->
+
+<!-- ``` -->
+
 ```{r}
-# making a new column that combines asian and hawpac for datasets with them
-# demographic data from years 2011-2015 have hawpac
-# use n_api and percent_api for all subsequent measures that include Asians
-
-test1 <- test1 %>%
-  mutate(n_api = n_asian + n_hawpac) %>%
-  mutate(percent_api = n_api/total)
-
-```
-
-```{r}
-se_elem_lower <- c("beasley", "beaubien", "bell", "carnegie", "coonley", "edison", "keller", "lenart", "mcpherson", "national teachers", "pritzker", "greeley", "orozco", "pulaski", "bronzeville", "decatur", "mcdade", "poe", "skinner", "skinner north")
-
-
-se_schools_demo_list <- test1 %>% 
-  filter(str_detect(tolower(school), paste(se_elem_lower, collapse = "|"))) %>% pull(school)
-
-# took out the vandepoel from this list because the original vector mistakenly filtered for this via "poe"
-
-se_schools_demo_list_1 <- test1 %>% 
-  filter(str_detect(tolower(school), paste(se_elem_lower, collapse = "|"))) %>%
-  filter(school != "Vanderpoel Magnet") %>%
-  filter(school != "John H Vanderpoel Elementary Magnet School") %>%
-  filter(school != "VANDERPOEL") %>%
-   filter(school != "Noble Street Charter - Pritzker College Prep") %>% 
-  filter(school != "Bronzeville Scholastic Academy High School") %>%
-  filter(school != "Urban Prep Academy for Young Men - Bronzeville") %>% 
-  filter(school != "Isabelle C O'Keeffe Elementary School") %>% 
-  filter(school != "LEARN Charter ES - Charles and Dorothy Campbell") %>% 
-  filter(school != "Bronzeville Mil HS") %>% 
-  filter(school != "Edison Park Elementary School") %>% 
-  filter(school != "Edison Park") %>%
-  filter(school != "Beasley CPC") %>% 
-  filter(school != "LEARN CHTR - CAMPBELL") %>% 
-  pull(school)
-
-x <- test1 %>% 
-  mutate(policy_year = ifelse(year > 2011, 1, 0)) %>% 
-  mutate(se_elem = ifelse(school %in% se_schools_demo_list_1, 1, 0)) %>% 
-  mutate(did = policy_year * se_elem)
 
 # for appending school IDs to years 2006-2008
 
@@ -288,11 +298,10 @@ for(i in 1:nrow(x)) {
 }
 
 # labelling each SE school again with school IDs 
-x2 <- x %>% 
+x <- x %>% 
   mutate(policy_year = ifelse(year > 2011, 1, 0)) %>% 
   mutate(se_elem = ifelse(school_id %in% missing_school_ids, 1, 0)) %>% 
   mutate(did = policy_year * se_elem)
-
 
 ```
 
@@ -404,24 +413,6 @@ didreg_table2 <- get_regression_table(didreg2, digits = 3)
 didreg_table2 <-gt(didreg_table2)
 
 
-
-## Erroneous code ##
-
-# probably not necessarily
-se_schools_demo <- se_schools_demo %>% 
-   mutate(policy_year = ifelse(year > 2011, 1, 0))
-
-#doesn't work
-se_schools_demo <- se_schools_demo %>% 
-  group_by(str_detect(tolower(school)))
-           
-           
-# facet wrap by school? maybe skip the plot visualization
-demo_plot <- ggplot(se_schools_demo, aes(year, n_white, group= school, color=school)) +
-  geom_point() +
-  theme_minimal() 
-
-demo_plot
 ```
 
 ```{r}
@@ -504,27 +495,34 @@ iep_comb <- iep_comb %>% filter(!is.na(school_name))
 
 ```
 
+<!-- ```{r} -->
+<!-- # old method of filtering for SE schools -->
+
+<!-- # adding in dummy variables for policy year and selective enrollment elementary schools  -->
+
+<!-- se_elem_lower <- c("beasley", "beaubien", "bell", "carnegie", "coonley", "edison", "keller", "lenart", "mcpherson", "national teachers", "pritzker", "greeley", "orozco", "pulaski", "bronzeville", "decatur", "mcdade", "poe", "skinner", "skinner north") -->
+
+<!-- # made a new list that tracks all schools with the key words above -->
+<!-- # took out schools from this list that were not supposed to be included in the selective enrollment schools list because the original vector mistakenly filtered for them -->
+
+<!-- se_schools_demo_list2 <- iep_comb %>%  -->
+<!--   filter(str_detect(tolower(school_name), paste(se_elem_lower, collapse = "|"))) %>% -->
+<!--   filter(school_name != "Vanderpoel Magnet") %>% -->
+<!--   filter(school_name != "John H Vanderpoel Elementary Magnet School") %>% -->
+<!--   filter(school_name != "VANDERPOEL") %>% -->
+<!--   filter(school_name != "Noble Street Charter - Pritzker College Prep") %>%  -->
+<!--   filter(school_name != "Bronzeville Scholastic Academy High School") %>% -->
+<!--   filter(school_name != "Urban Prep Academy for Young Men - Bronzeville") %>%  -->
+<!--   filter(school_name != "Isabelle C O'Keeffe Elementary School") %>%  -->
+<!--   filter(school_name != "LEARN Charter ES - Charles and Dorothy Campbell") %>%  -->
+<!--   filter(school_name != "Bronzeville Mil HS") %>%  -->
+<!--   filter(school_name != "Edison Park Elementary School") %>%  -->
+<!--   filter(school_name != "Edison Park") %>%  -->
+<!--   pull(school_name) -->
+<!-- ``` -->
+
 ```{r}
-# adding in dummy variables for policy year and selective enrollment elementary schools 
-
-se_elem_lower <- c("beasley", "beaubien", "bell", "carnegie", "coonley", "edison", "keller", "lenart", "mcpherson", "national teachers", "pritzker", "greeley", "orozco", "pulaski", "bronzeville", "decatur", "mcdade", "poe", "skinner", "skinner north")
-
-# made a new list that tracks all schools with the key words above
-
-se_schools_demo_list2 <- iep_comb %>% 
-  filter(str_detect(tolower(school_name), paste(se_elem_lower, collapse = "|"))) %>%
-  filter(school_name != "Vanderpoel Magnet") %>%
-  filter(school_name != "John H Vanderpoel Elementary Magnet School") %>%
-  filter(school_name != "VANDERPOEL") %>%
-  filter(school_name != "Noble Street Charter - Pritzker College Prep") %>% 
-  filter(school_name != "Bronzeville Scholastic Academy High School") %>%
-  filter(school_name != "Urban Prep Academy for Young Men - Bronzeville") %>% 
-  filter(school_name != "Isabelle C O'Keeffe Elementary School") %>% 
-  filter(school_name != "LEARN Charter ES - Charles and Dorothy Campbell") %>% 
-  filter(school_name != "Bronzeville Mil HS") %>% 
-  filter(school_name != "Edison Park Elementary School") %>% 
-  filter(school_name != "Edison Park") %>% 
-  pull(school_name)
+# identifying names of schools that do not have a school ID (they are only from 2010-2011)
 
 se_elem_upper_2 <- c("Beasley Magnet", "Beaubien", "Bell", "Carnegie", "Coonley", "Edison", "Keller", "Lenart", "McPherson", "Natl Teachers Acad", "Pritzker", "Greeley", "Orozco", "Pulaski", "Bronzeville LH Chrt", "Decatur Classical", "McDade Classical", "Poe Classical", "Skinner Classical", "Skinner North")
 
@@ -536,8 +534,6 @@ for(i in 1:nrow(iep_comb)) {
 	}
 }
 
-# took out schools from this list that were not supposed to be included in the selective enrollment schools list because the original vector mistakenly filtered for them
-
 # relabelling se_elem using missing_school_ids vector to make the filtering for selective enrollment more accurate 
 
 iep_comb <- iep_comb %>% 
@@ -546,12 +542,16 @@ iep_comb <- iep_comb %>%
   mutate(did = policy_year * se_elem)
 
 # checked that there were ~120 observations for 20 SE schools with 6 years of data
-# there is 118 because National Teachers Academy does not have data for 2010 and 2011
 
 iep_comb %>% filter(se_elem == 1) %>% nrow()
 
+# relabelling columns to make them more readable
+
 iep_comb <- setnames(iep_comb, old = c('n','percent', 'n_1', 'percent_1', 'n_2', 'percent_2'), new = c('n_bil','percent_bil', 'n_iep', 'percent_iep', 'n_free', 'percent_free'))
 
+```
+
+```{r}
 # regression for bilingualism as a dependent variable 
 
 iep_reg1 = lm(percent_bil ~ se_elem + policy_year + did, data = iep_comb)
@@ -567,11 +567,13 @@ summary(iep_reg2)
 iep_reg3 = lm(percent_free ~ se_elem + policy_year + did, data = iep_comb)
 summary(iep_reg3)
 
-# plots of each variable as dependent variables (WHY are there so many y-values?)
+# make these into numeric variables
 
 iep_comb$percent_bil <- as.numeric(iep_comb$percent_bil)
 iep_comb$percent_iep <- as.numeric(iep_comb$percent_iep)
 iep_comb$percent_free <- as.numeric(iep_comb$percent_free)
+
+# plots of each variable as dependent variables
 
 plot_bil <- ggplot(iep_comb, aes(year, percent_bil, group = se_elem, color = se_elem)) +
   stat_summary(fun.y = mean, geom = 'line') +
@@ -598,7 +600,7 @@ plot_free <- ggplot(iep_comb, aes(year, percent_free, group = se_elem, color = s
 
 # example regression for adding control variable at the school level, after x and iep_comb have been merged
 
-examplereg = lm(new_composite_12 ~ se_elem + policy_year + did + percent_bil, data = x)
+examplereg = lm(new_composite_16 ~ se_elem + policy_year + did + percent_bil, data = x)
 
 # old regression from above for test scores (might be useful)
 didreg = lm(new_composite_12 ~ se + policy_year + did, data = y)
@@ -612,13 +614,16 @@ x <- x %>% mutate(hhi = ((percent_white/100)^2 + (percent_afam/100)^2 + (percent
 
 reg_hhi = lm(hhi ~ se_elem + policy_year + did, data = x)
 
+# overall plot of HHI for SE v. non-SE schools
+
 plot_hhi <- ggplot(x, aes(year, hhi, group = se_elem, color = se_elem)) +
   stat_summary(geom = 'line') +
    scale_x_continuous(breaks = 0:2100) +
     geom_vline(xintercept = 2011) +
     theme_minimal()
 
-#plot of a specific school:
+# plot of a specific school: (prob don't need with my function below)
+
 plot_hhi_bell <- ggplot(data=subset(x, school== "Bell"), aes(year, hhi, group = se_elem, color = se_elem)) +
   stat_summary(geom = 'line') +
    scale_x_continuous(breaks = 0:2100) +
@@ -632,7 +637,6 @@ plot_test_bell <- ggplot(data=subset(x, school== "Bell"), aes(year, new_composit
     theme_minimal()
 
 
-
 ```
 
 ```{r merge}
@@ -640,6 +644,7 @@ plot_test_bell <- ggplot(data=subset(x, school== "Bell"), aes(year, new_composit
 # merging the iep_comb and x datasets to combine info about three student demographics + racial/test score info (respectively) 
 
 master <- merge(x=x,y=iep_comb,by=c("school_id", "year"),all=TRUE)
+master_2 <- merge(x=master, y=y, by=c("school_id", "year"), all=TRUE)
 
 master %>% filter(school_id %in% missing_school_ids) %>% glimpse()
 
@@ -653,11 +658,11 @@ county.graph <- function(df, na.rm = TRUE, ...){
   
   se_school_ids <- c("610246", "609796", "609799", "609837", "609866", "609794", "610084", "610298", "610070", "610231", "610229", "609850", "610329", "610138", "400019", "609880", "610066", "610132", "610177", "610534")
 
-  #plotlist = list()
-  #n <- 100
+  plotlist = list()
+  n <- 100
 for (i in seq_along(se_school_ids)) { # Loop over loop.vector
   
-   plot <- 
+   p <- 
       ggplot(subset(df, df$school_id==se_school_ids[i]),
              aes(year, percent_white, group = school_id)) + 
       geom_line(size=2) +
@@ -670,17 +675,20 @@ for (i in seq_along(se_school_ids)) { # Loop over loop.vector
       scale_x_continuous("Year", breaks = 0:2100) +
       
       ggtitle(paste('School: ', se_elem_upper_2[i],', Chicago, IL \n', 
-                    "County Population Projection within Age Categories (thousands) \n",
+                    "Data from the Chicago Public Schools website \n",
                     sep=''))
-      ggsave(plot, file=paste0("plot_", i, 
+      ggsave(p, file=paste0("plot_", i, 
                          # 'projection_graphs/percentwhite_graphs/',
                         #  se_school_ids[i], 
                         ".png", sep=''), scale=2)
       
      
-      # plotlist[[i]] = p
-   print(plot)
+       plotlist[[i]] = p
+   print(p)
 }
+  p <- grid.arrange(grobs=plotlist, ncol=5, nrow=4)
+  ggsave("bigplot.png",p)
+
 }
 
 
@@ -688,8 +696,7 @@ for (i in seq_along(se_school_ids)) { # Loop over loop.vector
 
 county.graph(master.long)
 
-p <- grid.arrange(grobs=plotlist, ncol=6)
-ggsave("bigplot.png",p)
+
 
 plot_1 <- system.file("plot_1.png", package = "cowplot")
 plot_2 <- system.file("extdata", "plot_2.png", package = "cowplot")
