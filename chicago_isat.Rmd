@@ -536,17 +536,17 @@ for(i in 1:nrow(iep_comb)) {
 
 # took out schools from this list that were not supposed to be included in the selective enrollment schools list because the original vector mistakenly filtered for them
 
-# checked that there were ~120 observations for 20 SE schools with 6 years of data
-# there is 118 because National Teachers Academy does not have data for 2010 and 2011
-
-iep_comb %>% filter(se_elem == 1) %>% nrow()
-
 # relabelling se_elem using missing_school_ids vector to make the filtering for selective enrollment more accurate 
 
 iep_comb <- iep_comb %>% 
   mutate(policy_year = ifelse(year > 2011, 1, 0)) %>% 
   mutate(se_elem = ifelse(school_id %in% missing_school_ids, 1, 0)) %>% 
   mutate(did = policy_year * se_elem)
+
+# checked that there were ~120 observations for 20 SE schools with 6 years of data
+# there is 118 because National Teachers Academy does not have data for 2010 and 2011
+
+iep_comb %>% filter(se_elem == 1) %>% nrow()
 
 iep_comb <- setnames(iep_comb, old = c('n','percent', 'n_1', 'percent_1', 'n_2', 'percent_2'), new = c('n_bil','percent_bil', 'n_iep', 'percent_iep', 'n_free', 'percent_free'))
 
@@ -629,6 +629,24 @@ plot_test_bell <- ggplot(data=subset(x, school== "Bell"), aes(year, new_composit
     geom_vline(xintercept = 2011) +
     theme_minimal()
 
+
+
+```
+```{r}
+```{r merge}
+
+# merging the iep_comb and x datasets to combine info about three student demographics + racial/test score info (respectively) 
+
+master <- merge(x=x,y=iep_comb,by=c("school_id", "year"),all=TRUE)
+
+master %>% filter(school_id %in% missing_school_ids) %>% glimpse()
+
+master.long <- melt(master, id.vars=c("year", "percent_white", "school_id"))
+```
+
+```{r}
+# creating a ggplot of percent_white change over time for each SE school
+
 county.graph <- function(df, na.rm = TRUE, ...){
   
   se_school_ids <- c("610246", "609796", "609799", "609837", "609866", "609794", "610084", "610298", "610070", "610231", "610229", "609850", "610329", "610138", "400019", "609880", "610066", "610132", "610177", "610534")
@@ -637,12 +655,12 @@ for (i in seq_along(se_school_ids)) { # Loop over loop.vector
   
    plot <- 
       ggplot(subset(df, df$school_id==se_school_ids[i]),
-             aes(year, hhi, group = se_elem, colour = se_elem)) + 
+             aes(year, percent_white, group = school_id)) + 
       
       geom_line(size=2) +
-      facet_wrap( ~  category, ncol=2) +
+      #facet_wrap( ~  category, ncol=2) +
       
-      theme_pander() +
+      #theme_pander() +
       theme(legend.position="none") + 
       
       #scale_y_continuous("County Population within Age Categories (thousands)", 
@@ -656,15 +674,8 @@ for (i in seq_along(se_school_ids)) { # Loop over loop.vector
 }
 }
 
+county.graph(master.long)
 ```
 
-```{r merge}
 
-# merging the iep_comb and x datasets to combine info about three student demographics + racial/test score info (respectively) 
-
-master <- merge(x=x,y=iep_comb,by=c("school_id", "year"),all=TRUE)
-
-master %>% filter(school_id %in% missing_school_ids) %>% glimpse()
-
-```
 
