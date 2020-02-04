@@ -194,6 +194,9 @@ demo_2014 <- demo_2014 %>% select(-no_3, -pct_3) %>% setnames(old = c('no','pct'
 
 demo_2015 <- demo_2015 %>% select(-no_3, -pct_3) %>% setnames(old = c('no','pct', 'no_1', 'pct_1', 'no_2', 'pct_2','no_4', 'pct_4', 'no_5', 'pct_5', 'no_6', 'pct_6', 'no_7', 'pct_7', 'no_8', 'pct_8'), new = c('n_white','percent_white', 'n_afam', 'percent_afam', 'n_natam', 'percent_natam', 'n_hisp', 'percent_hisp', 'n_multi', 'percent_multi', 'n_asian', 'percent_asian', 'n_hawpac', 'percent_hawpac', 'n_na', 'percent_na'))
 
+
+
+
 test1 <-bind_rows(demo_2006, demo_2007, demo_2008, demo_2009, demo_2010, demo_2011, demo_2012, demo_2013, demo_2014, demo_2015)
 
 # make sure order of commands is in order, in order for these results to be replicated after cleaning the environment
@@ -225,6 +228,17 @@ test1 <- test1 %>% filter(!is.na(school)) %>% filter(!is.na(n_white)) %>% filter
 ```
 
 ```{r}
+# making a new column that combines asian and hawpac for datasets with them
+# demographic data from years 2011-2015 have hawpac
+# use n_api and percent_api for all subsequent measures that include Asians
+
+test1 <- test1 %>%
+  mutate(n_api = n_asian + n_hawpac) %>%
+  mutate(percent_api = n_api/total)
+
+```
+
+```{r}
 se_elem_lower <- c("beasley", "beaubien", "bell", "carnegie", "coonley", "edison", "keller", "lenart", "mcpherson", "national teachers", "pritzker", "greeley", "orozco", "pulaski", "bronzeville", "decatur", "mcdade", "poe", "skinner", "skinner north")
 
 
@@ -234,13 +248,53 @@ se_schools_demo_list <- test1 %>%
 # took out the vandepoel from this list because the original vector mistakenly filtered for this via "poe"
 
 se_schools_demo_list_1 <- test1 %>% 
-  filter(str_detect(tolower(school), paste(se_elem_lower, collapse = "|"))) %>% filter(school != "Vanderpoel Magnet") %>% filter(school != "John H Vanderpoel Elementary Magnet School") %>% filter(school != "VANDERPOEL") %>% pull(school)
+  filter(str_detect(tolower(school), paste(se_elem_lower, collapse = "|"))) %>%
+  filter(school != "Vanderpoel Magnet") %>%
+  filter(school != "John H Vanderpoel Elementary Magnet School") %>%
+  filter(school != "VANDERPOEL") %>%
+   filter(school != "Noble Street Charter - Pritzker College Prep") %>% 
+  filter(school != "Bronzeville Scholastic Academy High School") %>%
+  filter(school != "Urban Prep Academy for Young Men - Bronzeville") %>% 
+  filter(school != "Isabelle C O'Keeffe Elementary School") %>% 
+  filter(school != "LEARN Charter ES - Charles and Dorothy Campbell") %>% 
+  filter(school != "Bronzeville Mil HS") %>% 
+  filter(school != "Edison Park Elementary School") %>% 
+  filter(school != "Edison Park") %>%
+  filter(school != "Beasley CPC") %>% 
+  filter(school != "LEARN CHTR - CAMPBELL") %>% 
+  pull(school)
 
 x <- test1 %>% 
   mutate(policy_year = ifelse(year > 2011, 1, 0)) %>% 
   mutate(se_elem = ifelse(school %in% se_schools_demo_list_1, 1, 0)) %>% 
   mutate(did = policy_year * se_elem)
 
+# for appending school IDs to years 2006-2008
+
+se_elem_upper <- c("Beasley Magnet", "Beaubien", "Bell", "Carnegie", "Coonley", "Edison", "Keller Magnet", "Lenart", "Mcpherson", "Natl Teachers Acad", "Pritzker", "Greeley", "Orozco", "Pulaski", "Bronzeville LH Chtr", "Decatur Classical", "McDade Classical", "Poe Classical", "Skinner Classical", "Skinner North")
+
+missing_school_ids <- c("610246", "609796", "609799", "609837", "609866", "609794", "610084", "610298", "610070", "610231", "610229", "609850", "610329", "610138", "400019", "609880", "610066", "610132", "610177", "610534")
+
+# filling in school IDs for missing selective enrollment schools
+
+for(i in 1:nrow(x)) {
+	for(j in 1:length(se_elem_upper)) {
+		if(x$school[i] == se_elem_upper[j]) {
+			x$school_id[i] <- missing_school_ids[j]
+		}
+	}
+}
+
+# labelling each SE school again with school IDs 
+x2 <- x %>% 
+  mutate(policy_year = ifelse(year > 2011, 1, 0)) %>% 
+  mutate(se_elem = ifelse(school_id %in% missing_school_ids, 1, 0)) %>% 
+  mutate(did = policy_year * se_elem)
+
+
+```
+
+```{r}
 # Estimating the DID estimator:
 
 # unlisted the n_white variable in order to make it a numeric variable 
@@ -264,9 +318,14 @@ x$percent_asian <- as.numeric(x$percent_asian)
 x$percent_hisp <- unlist(x$percent_hisp)
 x$percent_hisp <- as.numeric(x$percent_hisp)
 
-# doesn't really work to unlist a whole dataframe
-x_unlisted <- unlist(x)
-x_num <- as.numeric(x_unlisted)
+x$percent_multi <- unlist(x$percent_multi)
+x$percent_multi <- as.numeric(x$percent_multi)
+
+x$percent_hawpac <- unlist(x$percent_hawpac)
+x$percent_hawpac <- as.numeric(x$percent_hawpac)
+```
+
+```{r}
 
 # did regression
 didreg2 = lm(n_white ~ se_elem + policy_year + did, data = x)
@@ -373,6 +432,10 @@ slope_test2 <- lm(percent_natam ~ se_elem*year, data = filter(x, policy_year == 
 slope_test3 <- lm(percent_asian ~ se_elem*year, data = filter(x, policy_year == 0))
 slope_test4 <- lm(percent_hisp ~ se_elem*year, data = filter(x, policy_year == 0))
 
+# interacting with year gives you the slope difference for a particular group 
+slope_test_bil <- lm(percent_bil ~ se_elem*year, data = filter(iep_comb, policy_year == 0))
+slope_test_bil2 <- lm(percent_bil ~ se_elem*year + did*year, data = iep_comb)
+
 # should probably put this later since HHI is coded in a later chunk
 slope_test5 <- lm(hhi ~ se_elem*year, data = filter(x, policy_year == 0))
 
@@ -461,6 +524,16 @@ se_schools_demo_list2 <- iep_comb %>%
   filter(school_name != "Edison Park") %>% 
   pull(school_name)
 
+se_elem_upper_2 <- c("Beasley Magnet", "Beaubien", "Bell", "Carnegie", "Coonley", "Edison", "Keller", "Lenart", "McPherson", "Natl Teachers Acad", "Pritzker", "Greeley", "Orozco", "Pulaski", "Bronzeville LH Chrt", "Decatur Classical", "McDade Classical", "Poe Classical", "Skinner Classical", "Skinner North")
+
+for(i in 1:nrow(iep_comb)) {
+	for(j in 1:length(se_elem_upper_2)) {
+		if(iep_comb$school_name[i] == se_elem_upper_2[j]) {
+			iep_comb$school_id[i] <- missing_school_ids[j]
+		}
+	}
+}
+
 # took out schools from this list that were not supposed to be included in the selective enrollment schools list because the original vector mistakenly filtered for them
 
 # checked that there were ~120 observations for 20 SE schools with 6 years of data
@@ -468,9 +541,11 @@ se_schools_demo_list2 <- iep_comb %>%
 
 iep_comb %>% filter(se_elem == 1) %>% nrow()
 
+# relabelling se_elem using missing_school_ids vector to make the filtering for selective enrollment more accurate 
+
 iep_comb <- iep_comb %>% 
   mutate(policy_year = ifelse(year > 2011, 1, 0)) %>% 
-  mutate(se_elem = ifelse(school_name %in% se_schools_demo_list2, 1, 0)) %>% 
+  mutate(se_elem = ifelse(school_id %in% missing_school_ids, 1, 0)) %>% 
   mutate(did = policy_year * se_elem)
 
 iep_comb <- setnames(iep_comb, old = c('n','percent', 'n_1', 'percent_1', 'n_2', 'percent_2'), new = c('n_bil','percent_bil', 'n_iep', 'percent_iep', 'n_free', 'percent_free'))
@@ -492,6 +567,10 @@ summary(iep_reg3)
 
 # plots of each variable as dependent variables (WHY are there so many y-values?)
 
+iep_comb$percent_bil <- as.numeric(iep_comb$percent_bil)
+iep_comb$percent_iep <- as.numeric(iep_comb$percent_iep)
+iep_comb$percent_free <- as.numeric(iep_comb$percent_free)
+
 plot_bil <- ggplot(iep_comb, aes(year, percent_bil, group = se_elem, color = se_elem)) +
   stat_summary(fun.y = mean, geom = 'line') +
    scale_x_continuous(breaks = 0:2100) +
@@ -505,7 +584,7 @@ plot_iep <- ggplot(iep_comb, aes(year, percent_iep, group = se_elem, color = se_
     theme_minimal()
 
 plot_free <- ggplot(iep_comb, aes(year, percent_free, group = se_elem, color = se_elem)) +
-  stat_summary(geom = 'line') +
+  stat_summary(fun.y = mean, geom = 'line') +
    scale_x_continuous(breaks = 0:2100) +
     geom_vline(xintercept = 2011) +
     theme_minimal()
@@ -517,7 +596,7 @@ plot_free <- ggplot(iep_comb, aes(year, percent_free, group = se_elem, color = s
 
 # example regression for adding control variable at the school level, after x and iep_comb have been merged
 
-examplereg = lm(hhi ~ se_elem + policy_year + did + percent_bil, data = x)
+examplereg = lm(new_composite_12 ~ se_elem + policy_year + did + percent_bil, data = x)
 
 # old regression from above for test scores (might be useful)
 didreg = lm(new_composite_12 ~ se + policy_year + did, data = y)
@@ -527,7 +606,7 @@ didreg = lm(new_composite_12 ~ se + policy_year + did, data = y)
 ```{r}
 # adding in Herfindahl-Hirschman Index for race column- a measure of overall diversity
 
-x <- x %>% mutate(hhi = ((percent_white/100)^2 + (percent_afam/100)^2 + (percent_asian/100)^2 + (percent_hisp/100)^2 + (percent_natam/100)^2))
+x <- x %>% mutate(hhi = ((percent_white/100)^2 + (percent_afam/100)^2 + (percent_asian/100)^2 + (percent_hisp/100)^2 + (percent_natam/100)^2 + (percent_multi/100)^2 + (percent_hawpac/100)^2))
 
 reg_hhi = lm(hhi ~ se_elem + policy_year + did, data = x)
 
@@ -536,5 +615,56 @@ plot_hhi <- ggplot(x, aes(year, hhi, group = se_elem, color = se_elem)) +
    scale_x_continuous(breaks = 0:2100) +
     geom_vline(xintercept = 2011) +
     theme_minimal()
+
+#plot of a specific school:
+plot_hhi_bell <- ggplot(data=subset(x, school== "Bell"), aes(year, hhi, group = se_elem, color = se_elem)) +
+  stat_summary(geom = 'line') +
+   scale_x_continuous(breaks = 0:2100) +
+    geom_vline(xintercept = 2011) +
+    theme_minimal()
+
+plot_test_bell <- ggplot(data=subset(x, school== "Bell"), aes(year, new_composite_12, group = se_elem, color = se_elem)) +
+  stat_summary(geom = 'line') +
+   scale_x_continuous(breaks = 0:2100) +
+    geom_vline(xintercept = 2011) +
+    theme_minimal()
+
+county.graph <- function(df, na.rm = TRUE, ...){
+  
+  se_school_ids <- c("610246", "609796", "609799", "609837", "609866", "609794", "610084", "610298", "610070", "610231", "610229", "609850", "610329", "610138", "400019", "609880", "610066", "610132", "610177", "610534")
+
+for (i in seq_along(se_school_ids)) { # Loop over loop.vector
+  
+   plot <- 
+      ggplot(subset(df, df$school_id==se_school_ids[i]),
+             aes(year, hhi, group = se_elem, colour = se_elem)) + 
+      
+      geom_line(size=2) +
+      facet_wrap( ~  category, ncol=2) +
+      
+      theme_pander() +
+      theme(legend.position="none") + 
+      
+      #scale_y_continuous("County Population within Age Categories (thousands)", 
+                         #limits=c(0, max(df$value[df$County==county_list[i]]))/1000) +
+      #scale_x_continuous("Year") +
+      
+      ggtitle(paste(se_school_ids[i], ' County, New Jersey \n', 
+                    "County Population Projection within Age Categories (thousands) \n",
+                    sep=''))
+   print(plot)
+}
+}
+
+```
+
+```{r merge}
+
+# merging the iep_comb and x datasets to combine info about three student demographics + racial/test score info (respectively) 
+
+master <- merge(x=x,y=iep_comb,by=c("school_id", "year"),all=TRUE)
+
+master %>% filter(school_id %in% missing_school_ids) %>% glimpse()
+
 ```
 
