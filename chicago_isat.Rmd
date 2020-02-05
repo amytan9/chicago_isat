@@ -58,7 +58,9 @@ se_elem <- c("BEASLEY", "BEAUBIEN", "BELL", "CARNEGIE", "COONLEY", "EDISON, T", 
 
 # adding markers for SE schools and policy years
 
-y <- y %>% mutate(se = ifelse(school_name %in% se_elem, 1, 0)) %>% mutate(policy_year = ifelse(year >2010, 1, 0))
+y <- y %>% 
+  mutate(se = ifelse(school_name %in% se_elem, 1, 0)) %>%
+  mutate(policy_year = ifelse(year >2010, 1, 0))
 
 # interaction variable between SE schools and policy years
 
@@ -595,17 +597,6 @@ plot_free <- ggplot(iep_comb, aes(year, percent_free, group = se_elem, color = s
 
 ```
 
-```{r}
-# making bilingualism a control variable (as an example)
-
-# example regression for adding control variable at the school level, after x and iep_comb have been merged
-
-examplereg = lm(new_composite_16 ~ se_elem + policy_year + did + percent_bil, data = x)
-
-# old regression from above for test scores (might be useful)
-didreg = lm(new_composite_12 ~ se + policy_year + did, data = y)
-```
-
 
 ```{r}
 # adding in Herfindahl-Hirschman Index for race column- a measure of overall diversity
@@ -613,6 +604,7 @@ didreg = lm(new_composite_12 ~ se + policy_year + did, data = y)
 x <- x %>% mutate(hhi = ((percent_white/100)^2 + (percent_afam/100)^2 + (percent_asian/100)^2 + (percent_hisp/100)^2 + (percent_natam/100)^2 + (percent_multi/100)^2 + (percent_hawpac/100)^2))
 
 reg_hhi = lm(hhi ~ se_elem + policy_year + did, data = x)
+summary(reg_hhi)
 
 # overall plot of HHI for SE v. non-SE schools
 
@@ -644,14 +636,49 @@ plot_test_bell <- ggplot(data=subset(x, school== "Bell"), aes(year, new_composit
 # merging the iep_comb and x datasets to combine info about three student demographics + racial/test score info (respectively) 
 
 master <- merge(x=x,y=iep_comb,by=c("school_id", "year"),all=TRUE)
-master_2 <- merge(x=master, y=y, by=c("school_id", "year"), all=TRUE)
+
+# making sure it's the right amount of SE school entries
 
 master %>% filter(school_id %in% missing_school_ids) %>% glimpse()
 
-master.long <- melt(master, id.vars=c("year", "percent_white", "school_id"))
+# merging with ISAT score data 
+
+y_subset <- y %>% filter(year != 2001) %>% filter(year != 2002) %>% filter(year != 2003) %>% filter(year != 2004) %>% filter(year != 2005) 
+
+# no ISAT score data for 2015 so filter from other datasets as well for master_2 dataset
+
+master_subset <- master %>% filter(year != 2015)
+
+master_2 <- merge(x=master_subset, y=y_subset, by=c("school_id", "year"), all=TRUE)
+
+
 ```
 
 ```{r}
+# making bilingualism a control variable (as an example)
+
+# example regression for adding control variable at the school level, after x and iep_comb have been merged
+
+master_2$new_composite_16 <- as.numeric(master_2$new_composite_16)
+master_2$se_elem.x <- as.numeric(master_2$se_elem.x)
+master_2policy_year <- as.numeric(master_2$policy_year)
+master_2$did <- as.numeric(master_2$did)
+master_2$percent_bil<- as.numeric(master_2$percent_bil)
+
+score_reg = lm(new_composite_16 ~ se_elem.x + policy_year + did.x + percent_bil, 
+                data = master_2)
+
+summary(score_reg)
+
+# old regression from above for test scores (might be useful)
+didreg = lm(new_composite_12 ~ se + policy_year + did, data = y)
+```
+
+
+```{r}
+# making a vertical dataset with variables of interest
+master.long <- melt(master, id.vars=c("year", "percent_white", "school_id"))
+
 # creating a ggplot of percent_white change over time for each SE school
 
 county.graph <- function(df, na.rm = TRUE, ...){
@@ -698,10 +725,10 @@ county.graph(master.long)
 
 
 
-plot_1 <- system.file("plot_1.png", package = "cowplot")
-plot_2 <- system.file("extdata", "plot_2.png", package = "cowplot")
+#plot_1 <- system.file("plot_1.png", package = "cowplot")
+#plot_2 <- system.file("extdata", "plot_2.png", package = "cowplot")
 
-plot_grid(plot_1,plot_2, labels = c('A', 'B'), label_size = 10)
+#plot_grid(plot_1,plot_2, labels = c('A', 'B'), label_size = 10)
 ```
 
 
