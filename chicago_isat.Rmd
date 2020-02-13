@@ -57,6 +57,7 @@ y <- y %>% clean_names()
 se_elem <- c("BEASLEY", "BEAUBIEN", "BELL", "CARNEGIE", "COONLEY", "EDISON, T", "KELLER", "LENART", "MCPHERSON", "NATIONAL TEACHERS", "PRITZKER", "GREELEY", "OROZCO", "PULASKI", "BRONZEVILLE LTHOUSE CHTR CAMPUS", "DECATUR", "MCDADE", "POE", "SKINNER", "SKINNER NORTH")
 
 # adding markers for SE schools and policy years
+## CHANGE THIS TO SCHOOL ID
 
 y <- y %>% 
   mutate(se = ifelse(school_name %in% se_elem, 1, 0)) %>%
@@ -234,52 +235,41 @@ test1 <- test1 %>% filter(!is.na(school)) %>% filter(!is.na(n_white)) %>% filter
 
 ```
 
-<!-- ```{r} -->
-<!-- # making a new column that combines asian and hawpac for datasets with them -->
-<!-- # demographic data from years 2011-2015 have hawpac -->
-<!-- # use n_api and percent_api for all subsequent measures that include Asians -->
-<!-- # don't use this for now, check to see if new hhi is ok -->
 
-<!-- test1 <- test1 %>% -->
-<!--   mutate(n_api = n_asian + n_hawpac) %>% -->
-<!--   mutate(percent_api = n_api/total) -->
+```{r}
+# prob don't need this anymore, old method of filtering for SE schools not using school IDs
 
-<!-- ``` -->
-
-<!-- ```{r} -->
-<!-- # prob don't need this anymore, old method of filtering for SE schools not using school IDs -->
-
-<!-- se_elem_lower <- c("beasley", "beaubien", "bell", "carnegie", "coonley", "edison", "keller", "lenart", "mcpherson", "national teachers", "pritzker", "greeley", "orozco", "pulaski", "bronzeville", "decatur", "mcdade", "poe", "skinner", "skinner north") -->
+se_elem_lower <- c("beasley", "beaubien", "bell", "carnegie", "coonley", "edison", "keller", "lenart", "mcpherson", "national teachers", "pritzker", "greeley", "orozco", "pulaski", "bronzeville", "decatur", "mcdade", "poe", "skinner", "skinner north")
 
 
-<!-- se_schools_demo_list <- test1 %>%  -->
-<!--   filter(str_detect(tolower(school), paste(se_elem_lower, collapse = "|"))) %>% pull(school) -->
+se_schools_demo_list <- test1 %>%
+  filter(str_detect(tolower(school), paste(se_elem_lower, collapse = "|"))) %>% pull(school)
 
-<!-- # took out the vandepoel from this list because the original vector mistakenly filtered for this via "poe" -->
+# took out the vandepoel from this list because the original vector mistakenly filtered for this via "poe"
 
-<!-- se_schools_demo_list_1 <- test1 %>%  -->
-<!--   filter(str_detect(tolower(school), paste(se_elem_lower, collapse = "|"))) %>% -->
-<!--   filter(school != "Vanderpoel Magnet") %>% -->
-<!--   filter(school != "John H Vanderpoel Elementary Magnet School") %>% -->
-<!--   filter(school != "VANDERPOEL") %>% -->
-<!--    filter(school != "Noble Street Charter - Pritzker College Prep") %>%  -->
-<!--   filter(school != "Bronzeville Scholastic Academy High School") %>% -->
-<!--   filter(school != "Urban Prep Academy for Young Men - Bronzeville") %>%  -->
-<!--   filter(school != "Isabelle C O'Keeffe Elementary School") %>%  -->
-<!--   filter(school != "LEARN Charter ES - Charles and Dorothy Campbell") %>%  -->
-<!--   filter(school != "Bronzeville Mil HS") %>%  -->
-<!--   filter(school != "Edison Park Elementary School") %>%  -->
-<!--   filter(school != "Edison Park") %>% -->
-<!--   filter(school != "Beasley CPC") %>%  -->
-<!--   filter(school != "LEARN CHTR - CAMPBELL") %>%  -->
-<!--   pull(school) -->
+se_schools_demo_list_1 <- test1 %>%
+  filter(str_detect(tolower(school), paste(se_elem_lower, collapse = "|"))) %>%
+  filter(school != "Vanderpoel Magnet") %>%
+  filter(school != "John H Vanderpoel Elementary Magnet School") %>%
+  filter(school != "VANDERPOEL") %>%
+   filter(school != "Noble Street Charter - Pritzker College Prep") %>%
+  filter(school != "Bronzeville Scholastic Academy High School") %>%
+  filter(school != "Urban Prep Academy for Young Men - Bronzeville") %>%
+  filter(school != "Isabelle C O'Keeffe Elementary School") %>%
+  filter(school != "LEARN Charter ES - Charles and Dorothy Campbell") %>%
+  filter(school != "Bronzeville Mil HS") %>%
+  filter(school != "Edison Park Elementary School") %>%
+  filter(school != "Edison Park") %>%
+  filter(school != "Beasley CPC") %>%
+  filter(school != "LEARN CHTR - CAMPBELL") %>%
+  pull(school)
 
-<!-- x <- test1 %>%  -->
-<!--   mutate(policy_year = ifelse(year > 2011, 1, 0)) %>%  -->
-<!--   mutate(se_elem = ifelse(school %in% se_schools_demo_list_1, 1, 0)) %>%  -->
-<!--   mutate(did = policy_year * se_elem) -->
+x <- test1 %>%
+  mutate(policy_year = ifelse(year > 2011, 1, 0)) %>%
+  mutate(se_elem = ifelse(school %in% se_schools_demo_list_1, 1, 0)) %>%
+  mutate(did = policy_year * se_elem)
 
-<!-- ``` -->
+```
 
 ```{r}
 
@@ -327,6 +317,8 @@ x$percent_natam <- as.numeric(x$percent_natam)
 
 x$percent_asian <- unlist(x$percent_asian)
 x$percent_asian <- as.numeric(x$percent_asian)
+x$n_asian <- unlist(x$n_asian)
+x$n_asian <- as.numeric(x$n_asian)
 
 x$percent_hisp <- unlist(x$percent_hisp)
 x$percent_hisp <- as.numeric(x$percent_hisp)
@@ -336,6 +328,24 @@ x$percent_multi <- as.numeric(x$percent_multi)
 
 x$percent_hawpac <- unlist(x$percent_hawpac)
 x$percent_hawpac <- as.numeric(x$percent_hawpac)
+x$n_hawpac <- unlist(x$n_hawpac)
+x$n_hawpac <- as.numeric(x$n_hawpac)
+
+x$total <- as.numeric(x$total)
+```
+
+```{r}
+# making a new column that combines asian and hawpac for datasets with them
+# demographic data from years 2011-2015 have hawpac
+# use n_api and percent_api for all subsequent measures that include Asians
+# don't use this for now, check to see if new hhi is ok
+
+x <- x %>% mutate_all(~replace(., is.na(.), 0))
+
+x <- x %>%
+  mutate(n_api = n_asian + n_hawpac) %>%
+  mutate(percent_api = n_api/total)
+
 ```
 
 ```{r}
@@ -436,9 +446,15 @@ slope_test5 <- lm(hhi ~ se_elem*year, data = filter(x, policy_year == 0))
 
 # do for every slope test to see which was significant
 summary(slope_test) 
+summary(slope_test1)
+summary(slope_test2)
+summary(slope_test3)
+summary(slope_test4)
+summary(slope_test5)
 
 # slope test 0 had significance for se*year
 # slope tests 2 and 4 had significance for year
+# sloptest2 had significance for all of them but maybe because Nat. Am. as a group is small?
 
 ```
 
@@ -601,14 +617,15 @@ plot_free <- ggplot(iep_comb, aes(year, percent_free, group = se_elem, color = s
 ```{r}
 # adding in Herfindahl-Hirschman Index for race column- a measure of overall diversity
 
-x <- x %>% mutate(hhi = ((percent_white/100)^2 + (percent_afam/100)^2 + (percent_asian/100)^2 + (percent_hisp/100)^2 + (percent_natam/100)^2 + (percent_multi/100)^2 + (percent_hawpac/100)^2))
+x_with_hhi <- x %>% mutate(hhi = ((percent_white/100)^2 + (percent_afam/100)^2 + (percent_api/100)^2 + (percent_hisp/100)^2 + (percent_natam/100)^2 + (percent_multi/100)^2 ))
 
-reg_hhi = lm(hhi ~ se_elem + policy_year + did, data = x)
+reg_hhi = lm(hhi ~ se_elem + policy_year + did, data = x_with_hhi)
+
 summary(reg_hhi)
 
 # overall plot of HHI for SE v. non-SE schools
 
-plot_hhi <- ggplot(x, aes(year, hhi, group = se_elem, color = se_elem)) +
+plot_hhi <- ggplot(x_with_hhi, aes(year, hhi, group = se_elem, color = se_elem)) +
   stat_summary(geom = 'line') +
    scale_x_continuous(breaks = 0:2100) +
     geom_vline(xintercept = 2011) +
@@ -616,13 +633,13 @@ plot_hhi <- ggplot(x, aes(year, hhi, group = se_elem, color = se_elem)) +
 
 # plot of a specific school: (prob don't need with my function below)
 
-plot_hhi_bell <- ggplot(data=subset(x, school== "Bell"), aes(year, hhi, group = se_elem, color = se_elem)) +
+plot_hhi_bell <- ggplot(data=subset(x_with_hhi, school== "Bell"), aes(year, hhi, group = se_elem, color = se_elem)) +
   stat_summary(geom = 'line') +
    scale_x_continuous(breaks = 0:2100) +
     geom_vline(xintercept = 2011) +
     theme_minimal()
 
-plot_test_bell <- ggplot(data=subset(x, school== "Bell"), aes(year, new_composite_12, group = se_elem, color = se_elem)) +
+plot_test_bell <- ggplot(data=subset(x_with_hhi, school== "Bell"), aes(year, new_composite_12, group = se_elem, color = se_elem)) +
   stat_summary(geom = 'line') +
    scale_x_continuous(breaks = 0:2100) +
     geom_vline(xintercept = 2011) +
@@ -635,7 +652,7 @@ plot_test_bell <- ggplot(data=subset(x, school== "Bell"), aes(year, new_composit
 
 # merging the iep_comb and x datasets to combine info about three student demographics + racial/test score info (respectively) 
 
-master <- merge(x=x,y=iep_comb,by=c("school_id", "year"),all=TRUE)
+master <- merge(x=x_with_hhi, y=iep_comb, by=c("school_id", "year"), all=TRUE)
 
 # making sure it's the right amount of SE school entries
 
@@ -651,7 +668,6 @@ master_subset <- master %>% filter(year != 2015)
 
 master_2 <- merge(x=master_subset, y=y_subset, by=c("school_id", "year"), all=TRUE)
 
-
 ```
 
 ```{r}
@@ -665,17 +681,24 @@ master_2policy_year <- as.numeric(master_2$policy_year)
 master_2$did <- as.numeric(master_2$did)
 master_2$percent_bil<- as.numeric(master_2$percent_bil)
 
+## should I add hhi as a variable here?- ASK
+
 score_reg = lm(new_composite_16 ~ se_elem.x + policy_year + did.x + percent_bil, 
                 data = master_2)
 
+score_reg_2 = lm(new_composite_16 ~ se_elem.x + policy_year + did.x + hhi + percent_bil,
+                data = master_2)
+
 summary(score_reg)
+summary(score_reg_2)
 
 # old regression from above for test scores (might be useful)
 didreg = lm(new_composite_12 ~ se + policy_year + did, data = y)
 ```
 
 
-```{r}
+```{r school_level_visualization}
+
 # making a vertical dataset with variables of interest
 master.long <- melt(master, id.vars=c("year", "percent_white", "school_id"))
 
@@ -687,6 +710,9 @@ county.graph <- function(df, na.rm = TRUE, ...){
 
   plotlist = list()
   n <- 100
+  
+  p <- NA
+  
 for (i in seq_along(se_school_ids)) { # Loop over loop.vector
   
    p <- 
@@ -708,14 +734,14 @@ for (i in seq_along(se_school_ids)) { # Loop over loop.vector
                          # 'projection_graphs/percentwhite_graphs/',
                         #  se_school_ids[i], 
                         ".png", sep=''), scale=2)
-      
      
        plotlist[[i]] = p
    print(p)
 }
-  p <- grid.arrange(grobs=plotlist, ncol=5, nrow=4)
-  ggsave("bigplot.png",p)
-
+  # grid <- plot_grid(plotlist[[1]],plotlist[[2]], labels = c('A', 'B'), label_size = 10)
+  # the below didn't work to put the plots into one grid, so try again later
+  # p <- grid.arrange(grobs=plotlist, ncol=5, nrow=4)
+  # ggsave("bigplot.png", p)
 }
 
 
@@ -724,6 +750,7 @@ for (i in seq_along(se_school_ids)) { # Loop over loop.vector
 county.graph(master.long)
 
 
+# need to figure out how to put plots as objects so it can be used with cowplot
 
 #plot_1 <- system.file("plot_1.png", package = "cowplot")
 #plot_2 <- system.file("extdata", "plot_2.png", package = "cowplot")
@@ -731,5 +758,146 @@ county.graph(master.long)
 #plot_grid(plot_1,plot_2, labels = c('A', 'B'), label_size = 10)
 ```
 
+
+```{r}
+# for reference ONLY
+reg_hhi = lm(hhi ~ se_elem + policy_year + did, data = x)
+
+# making a vertical dataset with variables of interest
+hhi.long <- melt(x_with_hhi, id.vars=c("year", "hhi", "school_id"))
+
+# creating a ggplot of percent_white change over time for each SE school
+
+# DON"T USE a for loop WITHIN a function, just keep for loop
+hhi.graph <- function(df, na.rm = TRUE, ...){
+  
+  se_school_ids <- c("610246", "609796", "609799", "609837", "609866", "609794", "610084", "610298", "610070", "610231", "610229", "609850", "610329", "610138", "400019", "609880", "610066", "610132", "610177", "610534")
+  
+df <- hhi.long 
+ plotlist <- list()
+ 
+for (i in 1:length(se_school_ids)) { # Loop over loop.vector
+  
+   hhi_p <- 
+      ggplot(subset(df, df$school_id==se_school_ids[i]),
+             aes(year, hhi, group = school_id)) + 
+      geom_line(size=2) +
+      facet_wrap( ~  school_id, ncol=5, nrow = 4) +
+      geom_vline(xintercept = 2011) +
+      theme_pander() +
+      theme(legend.position="none") + 
+      
+      scale_y_continuous("HHI") +
+      scale_x_continuous("Year", breaks = 0:2100) +
+      
+      ggtitle(paste('School: ', se_elem_upper_2[i],', Chicago, IL \n', 
+                    "Data from the Chicago Public Schools website \n",
+                    sep=''))
+      ggsave(hhi_p, file=paste0("hhiplot_", i, 
+                         # 'projection_graphs/percentwhite_graphs/',
+                        #  se_school_ids[i], 
+                        ".png", sep=''), scale=2)
+      
+     
+       plotlist[[j]] = hhi_p
+   
+       print(hhi_p)
+       
+   assign(paste("hhi_p_", i, sep = ""), hhi_p)
+   
+}
+  # the below didn't work to put the plots into one grid, so try again later
+  # p <- grid.arrange(grobs=plotlist, ncol=5, nrow=4)
+  # ggsave("bigplot.png",p)
+
+}
+
+
+# using function on the long dataset
+
+x <- hhi.graph(hhi.long)
+
+```
+
+```{r}
+# DOESNT WORK
+
+
+y$year <- as.numeric(y$year)
+y$year <- unlist(y$year)
+y$new_composite_16 <- as.numeric(y$new_composite_16)
+y$new_composite_16 <- unlist(y$new_composite_16)
+y$school_id <- as.numeric(y$school_id)
+y$school_id <- unlist(y$school_id)
+y$grade <- as.numeric(y$grade)
+y$grade<- unlist(y$grade)
+
+require(data.table)
+y_edit <- data.table(y)
+
+y_edit$new_composite_16 <- as.numeric(y_edit$new_composite_16)
+y_edit$new_composite_16 <- unlist(y_edit$new_composite_16)
+
+# need to input grades
+
+for(i in 1:5925) {
+  y_edit$grade <- c("3rd grade")
+}
+
+  
+
+# making a vertical dataset with variables of interest- DOESN'T WORK- ask why
+test.long <- melt(y_edit, id.vars=c("year", "new_composite_16", "school_id", "grade"))
+
+# creating a ggplot of percent_white change over time for each SE school
+
+test.graph <- function(df, na.rm = TRUE, ...){
+  
+  se_school_ids <- c("610246", "609796", "609799", "609837", "609866", "609794", "610084", "610298", "610070", "610231", "610229", "609850", "610329", "610138", "400019", "609880", "610066", "610132", "610177", "610534")
+
+  #plotlist = list()
+  #n <- 100
+  df2 <- test.long
+  
+  for (i in seq_along(se_school_ids)) { # Loop over loop.vector
+  
+   test_p <- 
+      ggplot(subset(df2, df2$school_id==se_school_ids[i]),
+             aes(year, new_composite_16, group = school_id)) + 
+      geom_line(size=2) +
+      facet_wrap( ~  school_id, ncol=3) +
+      geom_vline(xintercept = 2011) +
+      theme_pander() +
+      theme(legend.position="none") + 
+      
+      scale_y_continuous("Test scores") +
+      scale_x_continuous("Year", breaks = 0:2100) +
+      
+      ggtitle(paste('School: ', se_elem_upper_2[i],', Chicago, IL \n', 
+                    "Data from the Chicago Public Schools website \n",
+                    sep=''))
+      ggsave(test_p, file=paste0("testplot_", i, 
+                         # 'projection_graphs/percentwhite_graphs/',
+                        #  se_school_ids[i], 
+                        ".png", sep=''), scale=2)
+      
+     
+       #plotlist[[i]] = p
+   print(test_p)
+   
+     assign(paste("test_p", i, sep = ""), test_p)
+}
+  
+  # the below didn't work to put the plots into one grid, so try again later
+  #p <- grid.arrange(grobs=plotlist, ncol=5, nrow=4)
+  #ggsave("bigplot.png",p)
+
+}
+
+
+# using function on the long dataset
+
+test.graph(test.long)
+```
 
 
