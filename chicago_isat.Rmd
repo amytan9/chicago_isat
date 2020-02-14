@@ -681,13 +681,11 @@ master_2policy_year <- as.numeric(master_2$policy_year)
 master_2$did <- as.numeric(master_2$did)
 master_2$percent_bil<- as.numeric(master_2$percent_bil)
 
-## should I add hhi as a variable here?- ASK
+## should I add hhi as a variable here?- ASK (yes)
 
-score_reg = lm(new_composite_16 ~ se_elem.x + policy_year + did.x + percent_bil, 
-                data = master_2)
+score_reg = lm(new_composite_16 ~ se_elem.x + policy_year + did.x + percent_bil, data = master_2)
 
-score_reg_2 = lm(new_composite_16 ~ se_elem.x + policy_year + did.x + hhi + percent_bil,
-                data = master_2)
+score_reg_2 = lm(new_composite_16 ~ se_elem.x + policy_year + did.x + hhi + percent_bil, data = master_2)
 
 summary(score_reg)
 summary(score_reg_2)
