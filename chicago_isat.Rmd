@@ -73,42 +73,21 @@ y <- y %>% mutate(did = se * policy_year)
 
 # using the composite_16 variable since that is the measure of percent of students who exceed ISBE standards
 
-# unlisted the composite_16 variable in order to make it a numeric variable 
+# unlisted the composite_16 variable and created a new variable in order to make it a numeric variable 
 
 y$new_composite_16 <- unlist(y$composite_16)
 y$new_composite_16 <- as.numeric(y$new_composite_16)
 
-# did regression for composite test scores
-didreg = lm(new_composite_16 ~ se + policy_year + did, data = y)
+# also unlisted % exceed for math and reading but didn't create new variables 
 
-# plot parallel slopes for SE and non-SE schools
-
-score_plot <- ggplot(y, aes(year, new_composite_16, group = se, color = se)) +
-  stat_summary(geom = 'line') +
-   scale_x_continuous(breaks = 0:2100) +
-    geom_vline(xintercept = 2011) +
-    theme_minimal()
-
-# get regression outputs in a table
-summary(didreg)
-
-didreg_table <- get_regression_table(didreg, digits = 3)
-
-didreg_table <-gt(didreg_table)
-
+y$math_14 <- unlist(y$math_14)
+y$math_14 <- as.numeric(y$math_14)
+y$read_13 <- unlist(y$read_13)
+y$read_13 <- as.numeric(y$read_13)
 ```
 
+
 ```{r school_demo_data, echo=FALSE}
-# reading in demographic data by year
-# started at 2006 to give five years of demographic data before the change was implemented in the 2011-ending year
-
-#demo_2002 <- read_xlsx("demo_data/Thesis_demographic_data/2002_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text") %>% clean_names()
-
-#demo_2003 <- read_xlsx("demo_data/Thesis_demographic_data/2003_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
-
-#demo_2004 <- read_xlsx("demo_data/Thesis_demographic_data/2004_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
-
-#demo_2005 <- read_xlsx("demo_data/Thesis_demographic_data/2005_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text")
 
 demo_2006 <- read_xlsx("demo_data/Thesis_demographic_data/2006_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text") %>% clean_names()
 
@@ -129,11 +108,6 @@ demo_2013 <- read_xlsx("demo_data/Thesis_demographic_data/2013_schooldemo.xlsx",
 demo_2014 <- read_xlsx("demo_data/Thesis_demographic_data/2014_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text") %>% clean_names()
 
 demo_2015 <- read_xlsx("demo_data/Thesis_demographic_data/2015_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text") %>% clean_names()
-
-#demo_2002 <- demo_2002 %>% mutate(year = 2002)
-#demo_2003 <- demo_2003 %>% mutate(year = 2003)
-#demo_2004 <- demo_2004 %>% mutate(year = 2004)
-#demo_2005 <- demo_2005 %>% mutate(year = 2005)
 
 demo_2006 <- demo_2006 %>% mutate(year = 2006)
 demo_2007 <- demo_2007 %>% mutate(year = 2007)
@@ -507,16 +481,10 @@ master_2$did.x <- as.numeric(master_2$did.x)
 master_2$did <- as.numeric(master_2$did)
 master_2$percent_bil<- as.numeric(master_2$percent_bil)
 
-# DID regression on test scores
-# should I add hhi as a variable here?- yes (-robert)
-
-score_reg = lm(new_composite_16 ~ se_elem + policy_year + did, data = master_2)
-
-# + percent_bil-NVM
-
-score_reg_2 = lm(new_composite_16 ~ se_elem + policy_year + did + hhi, data = master_2)
-
 ```
+
+
+
 
 ```{r}
 # time trends
@@ -524,18 +492,21 @@ score_reg_2 = lm(new_composite_16 ~ se_elem + policy_year + did + hhi, data = ma
 ### slope test for the two lines (written with Robert)
 slope_test <- lm(percent_white ~ se_elem*year, data = filter(x, policy_year == 0))
 
+master_2 <- master_2 %>% mutate(year_num = year - 2006)
+
+  
 ### slope test for the two lines before policy change
-slope_test <- lm(percent_white ~ se_elem.x*year, data = filter(master_2, policy_year == 0))
-slope_test1 <- lm(percent_afam ~ se_elem.x*year, data = filter(master_2, policy_year == 0))
-slope_test2 <- lm(percent_natam ~ se_elem.x*year, data = filter(master_2, policy_year == 0))
-slope_test3 <- lm(percent_asian ~ se_elem.x*year, data = filter(master_2, policy_year == 0))
-slope_test4 <- lm(percent_hisp ~ se_elem.x*year, data = filter(master_2, policy_year == 0))
+slope_test <- lm(percent_white ~ se_elem.x*year_num, data = filter(master_2, policy_year == 0))
+slope_test1 <- lm(percent_afam ~ se_elem.x*year_num, data = filter(master_2, policy_year == 0))
+slope_test2 <- lm(percent_natam ~ se_elem.x*year_num, data = filter(master_2, policy_year == 0))
+slope_test3 <- lm(percent_asian ~ se_elem.x*year_num, data = filter(master_2, policy_year == 0))
+slope_test4 <- lm(percent_hisp ~ se_elem.x*year_num, data = filter(master_2, policy_year == 0))
 
 # should probably put this later since HHI is coded in a later chunk
-slope_test5 <- lm(hhi ~ se_elem.x*year, data = filter(master_2, policy_year == 0))
+slope_test5 <- lm(hhi ~ se_elem.x*year_num, data = filter(master_2, policy_year == 0))
 
 # slope test for test scores
-slope_test6 <- lm(new_composite_16 ~ se_elem.x*year, data = filter(master_2, policy_year == 0))
+slope_test6 <- lm(new_composite_16 ~ se_elem.x*year_num, data = filter(master_2, policy_year == 0))
 
 # interacting with year gives you the slope difference for a particular group 
 slope_test_bil <- lm(percent_bil ~ se_elem*year, data = filter(iep_comb, policy_year == 0))
@@ -648,9 +619,76 @@ ggsave("scatter/per_hsp.png")
 
 ```
 
+```{r}
+# plot parallel slopes for SE and non-SE schools 
+
+#composite scores
+score_plot <- ggplot(master_2, aes(year, new_composite_16, group = se, color = se)) +
+  stat_summary(geom = 'line') +
+   scale_x_continuous(breaks = 0:2100) +
+    geom_vline(xintercept = 2011) +
+    theme_minimal() +
+  ggsave("score_plot.png")
+
+# math
+score_math_plot <- ggplot(y, aes(year, math_14, group = se, color = se)) +
+  stat_summary(geom = 'line') +
+   scale_x_continuous(breaks = 0:2100) +
+    geom_vline(xintercept = 2011) +
+    theme_minimal() +
+   ggsave("score_math_plot.png")
+
+# reading
+score_read_plot <- ggplot(y, aes(year, read_13, group = se, color = se)) +
+  stat_summary(geom = 'line') +
+   scale_x_continuous(breaks = 0:2100) +
+    geom_vline(xintercept = 2011) +
+    theme_minimal() +
+   ggsave("score_read_plot.png")
+
+```
 
 ```{r}
-# did regression
+# DID regression on test scores
+# should I add hhi as a variable here?- yes (-robert)
+
+score_reg = lm(new_composite_16 ~ se_elem + policy_year + did, data = master_2)
+
+# + percent_bil-NVM, messes up DID estimate 
+
+score_reg_2 = lm(new_composite_16 ~ se_elem + policy_year + did + hhi, data = master_2)
+
+# score regressions for math
+score_reg_math = lm(math_14 ~ se_elem + policy_year + did, data = master_2)
+
+score_reg_math_2 = lm(math_14 ~ se_elem + policy_year + did + hhi, data = master_2)
+
+# score regressions for reading
+score_reg_read = lm(read_13 ~ se_elem + policy_year + did, data = master_2)
+
+score_reg_read_2 = lm(read_13 ~ se_elem + policy_year + did + hhi, data = master_2)
+
+# made DID regressions above using master_2 dataset instead to include HHI as a control
+# did regression for composite test scores
+#didreg = lm(new_composite_16 ~ se + policy_year + did, data = y)
+#didreg_math = lm(math_14 ~ se + policy_year + did, data = y)
+#didreg_read = lm(read_13 ~ se + policy_year + did, data = y)
+```
+
+```{r}
+stargazer(score_reg, score_reg_2, 
+          score_reg_math, score_reg_math_2, 
+          score_reg_read, score_reg_read_2, 
+          type="html", 
+          dep.var.labels = c("Composite", "Math", "Reading"),
+          column.labels = c("Without Control", "With Control", "Without Control","With Control", "Without Control", "With Control"),
+          covariate.labels = c("Selective Enrollment School", "Post Policy Change", "Difference-in-difference Estimator", "HHI Score"),
+          out="did_by_subject.html")
+```
+
+
+```{r}
+# did regression for race
 didreg2 = lm(n_white ~ se_elem + policy_year + did, data = x)
 didreg2_1 = lm(percent_white ~ se_elem + policy_year + did, data = x)
 
@@ -740,7 +778,7 @@ plot_hhi <- ggplot(x, aes(year, hhi, group = se_elem, color = se_elem)) +
 ```{r school_level_visualization}
 
 # making a vertical dataset with variables of interest
-master.long <- melt(master, id.vars=c("year", "percent_white", "school_id"))
+# master.long <- melt(master, id.vars=c("year", "percent_white", "school_id"))
 
 # creating a ggplot of percent_white change over time for each SE school
 
@@ -763,12 +801,10 @@ for (i in seq_along(se_school_ids)) { # Loop over loop.vector
       geom_vline(xintercept = 2011) +
       theme_pander() +
       theme(legend.position="none") + 
-      
       scale_y_continuous("Percent White") +
       scale_x_continuous("Year", breaks = 0:2100) +
-      
-      ggtitle(paste('School: ', se_elem_upper_2[i],', Chicago, IL \n', 
-                    "Data from the Chicago Public Schools website \n",
+      ggtitle(paste('School: ', se_elem_upper_2[i],'\n', 
+                    "Data from Chicago Public Schools \n",
                     sep=''))
       ggsave(p, file=paste0("plot_", i, 
                          # 'projection_graphs/percentwhite_graphs/',
