@@ -274,7 +274,7 @@ for(i in 1:nrow(x)) {
 # labelling each SE school again with school IDs 
 x <- x %>% 
   mutate(policy_year = ifelse(year > 2011, 1, 0)) %>% 
-  mutate(se_elem = ifelse(school_id %in% missing_school_ids, 1, 0)) %>% 
+  mutate(se_elem = ifelse(school_id %in% missing_school_ids & !is.na(school_id), 1, 0)) %>%
   mutate(did = policy_year * se_elem)
 
 ```
@@ -344,6 +344,8 @@ x <- x %>%
 
 x <- x %>% mutate(hhi = ((percent_white/100)^2 + (percent_afam/100)^2 + (percent_api/100)^2 + (percent_hisp/100)^2 + (percent_natam/100)^2 + (percent_multi/100)^2))
 
+# drop district total row (only one without unit and school ID)
+x <- x %>% filter(school != "District Total")
 ```
 
 ```{r}
@@ -433,7 +435,7 @@ for(i in 1:nrow(iep_comb)) {
 
 iep_comb <- iep_comb %>% 
   mutate(policy_year = ifelse(year > 2011, 1, 0)) %>% 
-  mutate(se_elem = ifelse(school_id %in% missing_school_ids, 1, 0)) %>% 
+  mutate(se_elem = ifelse(school_id %in% missing_school_ids & is.na(se_elem), 1, 0)) %>% 
   mutate(did = policy_year * se_elem)
 
 # checked that there were ~120 observations for 20 SE schools with 6 years of data
@@ -452,24 +454,42 @@ iep_comb$percent_free <- as.numeric(iep_comb$percent_free)
 
 ```
 
+
 ```{r merge}
+x_test <- x %>% mutate(new_id = ifelse(!is.na(school_id), school_id, unit))
+x_test <- x_test %>% mutate(unique_id = paste0(new_id, year))
+
+iep_comb_2 <- iep_comb %>% filter(school_name != "District Totals")
+iep_comb_2 <- iep_comb_2 %>%  mutate(new_id = ifelse(!is.na(school_id), school_id, unit))
+
 # BE CAREFUL
 # merging the iep_comb and x datasets to combine info about three student demographics + racial/test score info (respectively) 
 
-master <- merge(x=x, y=iep_comb, by=c("school_id", "year"), all=TRUE)
+master <- merge(x=x_test, y=iep_comb_2, by=c("new_id", "year"), all=TRUE)
 
 # making sure it's the right amount of SE school entries
 
-master %>% filter(school_id %in% missing_school_ids) %>% glimpse()
+master %>% filter(school_id.x %in% missing_school_ids) %>% glimpse()
 
-# merging with ISAT score data 
-
-score_data <- y %>% filter(year != 2001) %>% filter(year != 2002) %>% filter(year != 2003) %>% filter(year != 2004) %>% filter(year != 2005) 
 # no ISAT score data for 2015 so filter from other datasets as well for master_2 dataset
 
 master <- master %>% filter(year != 2015)
 
-master_2 <- merge(x=master, y=score_data, by=c("school_id", "year"), all=TRUE)
+# merging with ISAT score data 
+
+y <- y %>% filter(year != 2001) %>% filter(year != 2002) %>% filter(year != 2003) %>% filter(year != 2004) %>% filter(year != 2005) 
+y_test <- y %>% mutate(new_id = ifelse(!is.na(school_id), school_id, unit))
+
+# merging with all demographic (including IEP) data with score data 
+
+master_2 <- merge(x=master, y=y_test, by=c("new_id", "year"), all=TRUE)
+
+master_2 <- master_2 %>% 
+  mutate(policy_year = ifelse(year > 2011, 1, 0)) %>% 
+  mutate(se_elem = ifelse(school_id %in% missing_school_ids, 1, 0)) %>% 
+  mutate(did = policy_year * se_elem)
+
+master_2$se_elem <- master_2$se_elem %>% replace_na(0)
 ```
 
 
@@ -538,11 +558,21 @@ stargazer(slope_test, slope_test1, slope_test2, slope_test3,
           dep.var.labels.include = FALSE,
           column.labels = c("% White", "% African American", "% Native American", "% Asian", "% Hispanic", "HHI", "ISAT Scores"),
           covariate.labels = c("Selective Enrollment School", "Post Policy Change", "Selective Enrollment*Policy Change"),
-          out="slope_test_by_race_1.html")
+          out="slope_test_by_race_2.html")
 ```
 
 ```{r}
+# plot for how test scores changed before and after
 
+test_score_se_plot <- ggplot(master_2, aes(year, new_composite_16, group = se_elem, color = se_elem)) +
+  stat_summary(geom = 'line') +
+   scale_x_continuous(breaks = 0:2100) +
+    geom_vline(xintercept = 2011) +
+    theme_minimal()
+```
+
+
+```{r}
 # plot parallel slopes for SE and non-SE schools in terms of white demographic
 
 plot2 <- ggplot(x, aes(year, n_white, group = se_elem, color = se_elem)) +
@@ -719,7 +749,7 @@ county.graph <- function(df, na.rm = TRUE, ...){
 for (i in seq_along(se_school_ids)) { # Loop over loop.vector
   
    p <- 
-      ggplot(subset(df, df$school_id==se_school_ids[i]),
+      ggplot(subset(x, x$school_id==se_school_ids[i]),
              aes(year, percent_white, group = school_id)) + 
       geom_line(size=2) +
       facet_wrap( ~  school_id, ncol=5, nrow = 4) +
@@ -741,16 +771,19 @@ for (i in seq_along(se_school_ids)) { # Loop over loop.vector
        plotlist[[i]] = p
    print(p)
 }
-  # grid <- plot_grid(plotlist[[1]],plotlist[[2]], labels = c('A', 'B'), label_size = 10)
+  
+
+# can't cowplot them all together because they're .png files, not objects
+  
+# grid <- plot_grid(plotlist[[1]],plotlist[[2]], labels = c('A', 'B'), label_size = 10)
   # the below didn't work to put the plots into one grid, so try again later
   # p <- grid.arrange(grobs=plotlist, ncol=5, nrow=4)
   # ggsave("bigplot.png", p)
-}
-
+#}
 
 # using function on the master.long dataset
 
-county.graph(master.long)
+#county.graph(master.long)
 
 
 # need to figure out how to put plots as objects so it can be used with cowplot
@@ -760,10 +793,7 @@ county.graph(master.long)
 
 #plot_grid(plot_1,plot_2, labels = c('A', 'B'), label_size = 10)
 ```
-```{r}
-# cow plot to put all these together
-race_plots_comb <- plot_grid(plot1, 
-```
+
 
 
 ```{r}
@@ -828,57 +858,63 @@ x <- hhi.graph(hhi.long)
 ```
 
 ```{r}
-# DOESNT WORK
+# WORKS NOW
+# plots of each school's test scores over time
 
+# y$year <- as.numeric(y$year)
+# y$year <- unlist(y$year)
+# y$new_composite_16 <- as.numeric(y$new_composite_16)
+# y$new_composite_16 <- unlist(y$new_composite_16)
+# y$school_id <- as.numeric(y$school_id)
+# y$school_id <- unlist(y$school_id)
+# y$grade <- as.numeric(y$grade)
+# y$grade<- unlist(y$grade)
+# 
+# require(data.table)
+# y_edit <- data.table(y)
+# 
+# y_edit$new_composite_16 <- as.numeric(y_edit$new_composite_16)
+# y_edit$new_composite_16 <- unlist(y_edit$new_composite_16)
+# 
+# # need to input grades
+# 
+# for(i in 1:5925) {
+#   y_edit$grade <- c("3rd grade")
+# }
+# 
+# # example
+# hhi.long <- melt(x, id.vars=c("year", "hhi", "school_id"))
+# 
+# y_edit <- y_edit %>% filter(grade == "3rd grade")
 
-y$year <- as.numeric(y$year)
-y$year <- unlist(y$year)
-y$new_composite_16 <- as.numeric(y$new_composite_16)
-y$new_composite_16 <- unlist(y$new_composite_16)
-y$school_id <- as.numeric(y$school_id)
-y$school_id <- unlist(y$school_id)
-y$grade <- as.numeric(y$grade)
-y$grade<- unlist(y$grade)
+y1 <- y %>% group_by(year, school_id) %>% summarize(mean_score = mean(new_composite_16))
 
-require(data.table)
-y_edit <- data.table(y)
-
-y_edit$new_composite_16 <- as.numeric(y_edit$new_composite_16)
-y_edit$new_composite_16 <- unlist(y_edit$new_composite_16)
-
-# need to input grades
-
-for(i in 1:5925) {
-  y_edit$grade <- c("3rd grade")
-}
-
-
-hhi.long <- melt(x, id.vars=c("year", "hhi", "school_id"))
+# deframe(y$year)
+# deframe(y$new_composite_16)
+# deframe(y$school_id)
 
 # making a vertical dataset with variables of interest- DOESN'T WORK- ask why
-test.long <- melt(y, id.vars=c("year", "new_composite_16", "school_id"))
+#test.long <- melt(y, id.vars=c("year", "new_composite_16", "school_id"))
 
 # creating a ggplot of percent_white change over time for each SE school
 
-test.graph <- function(df, na.rm = TRUE, ...){
+#test.graph <- function(df, na.rm = TRUE, ...){
   
   se_school_ids <- c("610246", "609796", "609799", "609837", "609866", "609794", "610084", "610298", "610070", "610231", "610229", "609850", "610329", "610138", "400019", "609880", "610066", "610132", "610177", "610534")
 
   #plotlist = list()
   #n <- 100
-  df2 <- test.long
+  #df2 <- test.long
   
   for (i in seq_along(se_school_ids)) { # Loop over loop.vector
   
    test_p <- 
-      ggplot(subset(df2, df2$school_id==se_school_ids[i]),
-             aes(year, new_composite_16, group = school_id)) + 
+      ggplot(subset(y1, y1$school_id==se_school_ids[i]),
+             aes(year, mean_score, group = school_id)) + 
       geom_line(size=2) +
-      facet_wrap( ~  school_id, ncol=3) +
       geom_vline(xintercept = 2011) +
       theme_pander() +
       theme(legend.position="none") + 
-      
       scale_y_continuous("Test scores") +
       scale_x_continuous("Year", breaks = 0:2100) +
       
@@ -901,12 +937,12 @@ test.graph <- function(df, na.rm = TRUE, ...){
   #p <- grid.arrange(grobs=plotlist, ncol=5, nrow=4)
   #ggsave("bigplot.png",p)
 
-}
+#}
 
 
 # using function on the long dataset
 
-test.graph(test.long)
+#test.graph(test.long)
 ```
 
 
