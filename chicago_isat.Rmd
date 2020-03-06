@@ -27,6 +27,7 @@ library(moderndive)
 library(data.table)
 library(ggthemes)
 library(gridExtra)
+library(stargazer)
 library(ggplot2)
 library(tidyverse)
 ```
@@ -98,7 +99,8 @@ didreg_table <-gt(didreg_table)
 ```
 
 ```{r school_demo_data, echo=FALSE}
-
+# reading in demographic data by year
+# started at 2006 to give five years of demographic data before the change was implemented in the 2011-ending year
 
 #demo_2002 <- read_xlsx("demo_data/Thesis_demographic_data/2002_schooldemo.xlsx", skip = 1, col_names = TRUE, col_types = "text") %>% clean_names()
 
@@ -132,6 +134,7 @@ demo_2015 <- read_xlsx("demo_data/Thesis_demographic_data/2015_schooldemo.xlsx",
 #demo_2003 <- demo_2003 %>% mutate(year = 2003)
 #demo_2004 <- demo_2004 %>% mutate(year = 2004)
 #demo_2005 <- demo_2005 %>% mutate(year = 2005)
+
 demo_2006 <- demo_2006 %>% mutate(year = 2006)
 demo_2007 <- demo_2007 %>% mutate(year = 2007)
 demo_2008 <- demo_2008 %>% mutate(year = 2008)
@@ -145,38 +148,8 @@ demo_2015 <- demo_2015 %>% mutate(year = 2015)
 
 ```
 
-```{r combine_demo_data, echo=FALSE}
-# add datasets vertically as a test
-# MAYBE TAKE THIS CHUNK OUT, replicated later with test1
-
-test <-bind_rows(demo_2006, demo_2007, demo_2008, demo_2009, demo_2010, demo_2011, demo_2012, demo_2013, demo_2014, demo_2015)
-
-test <- test %>% clean_names()
-
-for(i in 1:nrow(test)) {
-	if(is.na(test$school_name[i])) {
-		test$school_name[i] <- test$school[i]
-	}
-}
-
-for(i in 1:nrow(test)) {
-	if(is.na(test$school_name[i])) {
-		test$school_name[i] <- test$educational_unit[i]
-	}
-}
-
-for(i in 1:nrow(test)) {
-	if(is.na(test$school_name[i])) {
-		test$school_name[i] <- test$education_units[i]
-	}
-}
-
-
-```
-
 ```{r clean_col_labels, echo=FALSE}
-
-# started at 2006 to give five years of demographic data before the change was implemented in the 2011-ending year
+# renamed column names because importing from Excel messed up the column labels
 
 demo_2006 <- setnames(demo_2006, old = c('n','percent', 'n_1', 'percent_1', 'n_2', 'percent_2', 'n_3', 'percent_3', 'n_4', 'percent_4', 'n_5', 'percent_5', 'n_6', 'percent_6', 'n_7', 'percent_7', 'n_8', 'percent_8', 'n_9', 'percent_9', 'n_10', 'percent_10'), new = c('n_white','percent_white', 'n_afam', 'percent_afam', 'n_natam', 'percent_natam', 'n_asian', 'percent_asian', 'n_hisp', 'percent_hisp', 'n_multi', 'percent_multi', 'n_mexican', 'percent_mexican', 'n_pr', 'percent_pr', 'n_cuban', 'percent_cuban', 'n_otherhisp', 'percent_otherhisp', 'n_multihisp', 'percent_multihisp'))
 
@@ -289,6 +262,15 @@ for(i in 1:nrow(x)) {
 	}
 }
 
+# filling in missing school IDs - WRONG DONT DO THIS
+# for(i in 1:nrow(x)) {
+# 	if(is.na(x$school_id[i])) {
+# 		x$school_id[i] <- x$unit[i]
+# 	}
+# }
+
+# so x ONLY has COMPLETE set of school IDs for selective enrollment schools for all years
+
 # labelling each SE school again with school IDs 
 x <- x %>% 
   mutate(policy_year = ifelse(year > 2011, 1, 0)) %>% 
@@ -314,6 +296,7 @@ x$percent_afam <- as.numeric(x$percent_afam)
 
 x$percent_natam <- unlist(x$percent_natam)
 x$percent_natam <- as.numeric(x$percent_natam)
+x$n_natam <- as.numeric(x$n_natam)
 
 x$percent_asian <- unlist(x$percent_asian)
 x$percent_asian <- as.numeric(x$percent_asian)
@@ -322,9 +305,11 @@ x$n_asian <- as.numeric(x$n_asian)
 
 x$percent_hisp <- unlist(x$percent_hisp)
 x$percent_hisp <- as.numeric(x$percent_hisp)
+x$n_hisp <- as.numeric(x$percent_hisp)
 
 x$percent_multi <- unlist(x$percent_multi)
 x$percent_multi <- as.numeric(x$percent_multi)
+x$n_multi<-as.numeric(x$n_multi)
 
 x$percent_hawpac <- unlist(x$percent_hawpac)
 x$percent_hawpac <- as.numeric(x$percent_hawpac)
@@ -338,10 +323,16 @@ x$total <- as.numeric(x$total)
 # making a new column that combines asian and hawpac for datasets with them
 # demographic data from years 2011-2015 have hawpac
 # use n_api and percent_api for all subsequent measures that include Asians
-# don't use this for now, check to see if new hhi is ok
 
-x <- x %>% mutate_all(~replace(., is.na(.), 0))
+# replacing all NA values with a 0 value so that those entries are included
+x$percent_asian <- x$percent_asian %>% replace_na(0)
+x$percent_hawpac <- x$percent_hawpac %>% replace_na(0)
+x$percent_multi <- x$percent_multi %>% replace_na(0)
+  
+# old code for replacing NA
+# x %>% mutate_all(~replace(., is.na(.), 0))
 
+# creating a new variable for API count and percentage
 x <- x %>%
   mutate(n_api = n_asian + n_hawpac) %>%
   mutate(percent_api = n_api/total)
@@ -349,116 +340,15 @@ x <- x %>%
 ```
 
 ```{r}
+# adding in Herfindahl-Hirschman Index for race column- a measure of overall diversity
 
-# did regression
-didreg2 = lm(n_white ~ se_elem + policy_year + did, data = x)
-didreg2_1 = lm(percent_white ~ se_elem + policy_year + did, data = x)
-
-### slope test for the two lines (written with Robert)
-slope_text <- lm(percent_white ~ se_elem*year, data = filter(x, policy_year == 0))
-
-
-didreg3 = lm(n_afam ~ se_elem + policy_year + did, data = x)
-didreg3_1 = lm(percent_afam ~ se_elem + policy_year + did, data = x)
-
-didreg4 = lm(n_natam ~ se_elem + policy_year + did, data = x)
-didreg4_1 = lm(percent_natam ~ se_elem + policy_year + did, data = x)
-
-didreg5 = lm(n_asian ~ se_elem + policy_year + did, data = x)
-didreg5_1 = lm(percent_asian ~ se_elem + policy_year + did, data = x)
-
-didreg6 = lm(n_hisp ~ se_elem + policy_year + did, data = x)
-didreg6_1 = lm(percent_hisp ~ se_elem + policy_year + did, data = x)
-
-# plot parallel slopes for SE and non-SE schools in terms of white demographic
-
-plot2 <- ggplot(x, aes(year, n_white, group = se_elem, color = se_elem)) +
-  stat_summary(geom = 'line') +
-   scale_x_continuous(breaks = 0:2100) +
-    geom_vline(xintercept = 2011) +
-    theme_minimal()
-
-plot2_1 <- ggplot(x, aes(year, percent_white, group = se_elem, color = se_elem)) +
-  stat_summary(geom = 'line') +
-   scale_x_continuous(breaks = 0:2100) +
-    geom_vline(xintercept = 2011) +
-    theme_minimal()
-
-# percent Afam by se_elem
-
-plot3 <- ggplot(x, aes(year, percent_afam, group = se_elem, color = se_elem)) +
-  stat_summary(geom = 'line') +
-   scale_x_continuous(breaks = 0:2100) +
-    geom_vline(xintercept = 2011) +
-    theme_minimal()
-
-# percent Native American
-
-plot4 <- ggplot(x, aes(year, percent_natam, group = se_elem, color = se_elem)) +
-  stat_summary(geom = 'line') +
-   scale_x_continuous(breaks = 0:2100) +
-    geom_vline(xintercept = 2011) +
-    theme_minimal()
-
-# percent Asian
-
-plot5 <- ggplot(x, aes(year, percent_asian, group = se_elem, color = se_elem)) +
-  stat_summary(geom = 'line') +
-   scale_x_continuous(breaks = 0:2100) +
-    geom_vline(xintercept = 2011) +
-    theme_minimal()
-
-# percent Hispanic
-
-plot6 <- ggplot(x, aes(year, percent_hisp, group = se_elem, color = se_elem)) +
-  stat_summary(geom = 'line') +
-   scale_x_continuous(breaks = 0:2100) +
-    geom_vline(xintercept = 2011) +
-    theme_minimal()
-
-# get regression outputs in a table
-summary(didreg2)
-summary(didreg3)
-
-didreg_table2 <- get_regression_table(didreg2, digits = 3)
-
-didreg_table2 <-gt(didreg_table2)
-
+x <- x %>% mutate(hhi = ((percent_white/100)^2 + (percent_afam/100)^2 + (percent_api/100)^2 + (percent_hisp/100)^2 + (percent_natam/100)^2 + (percent_multi/100)^2))
 
 ```
 
 ```{r}
-# time trends
+# loaded control variable dataset on three variables
 
-### slope test for the two lines before policy change
-slope_test <- lm(percent_white ~ se_elem*year, data = filter(x, policy_year == 0))
-slope_test1 <- lm(percent_afam ~ se_elem*year, data = filter(x, policy_year == 0))
-slope_test2 <- lm(percent_natam ~ se_elem*year, data = filter(x, policy_year == 0))
-slope_test3 <- lm(percent_asian ~ se_elem*year, data = filter(x, policy_year == 0))
-slope_test4 <- lm(percent_hisp ~ se_elem*year, data = filter(x, policy_year == 0))
-
-# interacting with year gives you the slope difference for a particular group 
-slope_test_bil <- lm(percent_bil ~ se_elem*year, data = filter(iep_comb, policy_year == 0))
-slope_test_bil2 <- lm(percent_bil ~ se_elem*year + did*year, data = iep_comb)
-
-# should probably put this later since HHI is coded in a later chunk
-slope_test5 <- lm(hhi ~ se_elem*year, data = filter(x, policy_year == 0))
-
-# do for every slope test to see which was significant
-summary(slope_test) 
-summary(slope_test1)
-summary(slope_test2)
-summary(slope_test3)
-summary(slope_test4)
-summary(slope_test5)
-
-# slope test 0 had significance for se*year
-# slope tests 2 and 4 had significance for year
-# sloptest2 had significance for all of them but maybe because Nat. Am. as a group is small?
-
-```
-
-```{r}
 iep_2015 <- read_xlsx("demo_data/chicago_isat_iep_data/iepdata_2015.xlsx", skip = 1, col_names = TRUE, col_types = "text") %>% clean_names()
 
 iep_2014 <- read_xlsx("demo_data/chicago_isat_iep_data/iepdata_2014.xlsx", skip = 1, col_names = TRUE, col_types = "text") %>% clean_names()
@@ -480,7 +370,6 @@ iep_2010 <- iep_2010 %>% mutate(year = 2010)
 ```
 
 ```{r}
-
 # combining iep data vertically
 
 iep_comb <-bind_rows(iep_2015, iep_2014, iep_2013, iep_2012, iep_2011, iep_2010)
@@ -502,7 +391,6 @@ for(i in 1:nrow(iep_comb)) {
 # seeing what rows still do not have a school name attached
 
 iep_na <- iep_comb %>% filter(is.na(school_name))
-view(iep_na)
 
 # figured out that these NAs are just district or summary totals, so do not need these rows
 # filtering those values out (as well as any missing race values), so only ones with school names present remain
@@ -513,36 +401,11 @@ iep_comb <- iep_comb %>% filter(!is.na(school_name))
 
 ```
 
-<!-- ```{r} -->
-<!-- # old method of filtering for SE schools -->
-
-<!-- # adding in dummy variables for policy year and selective enrollment elementary schools  -->
-
-<!-- se_elem_lower <- c("beasley", "beaubien", "bell", "carnegie", "coonley", "edison", "keller", "lenart", "mcpherson", "national teachers", "pritzker", "greeley", "orozco", "pulaski", "bronzeville", "decatur", "mcdade", "poe", "skinner", "skinner north") -->
-
-<!-- # made a new list that tracks all schools with the key words above -->
-<!-- # took out schools from this list that were not supposed to be included in the selective enrollment schools list because the original vector mistakenly filtered for them -->
-
-<!-- se_schools_demo_list2 <- iep_comb %>%  -->
-<!--   filter(str_detect(tolower(school_name), paste(se_elem_lower, collapse = "|"))) %>% -->
-<!--   filter(school_name != "Vanderpoel Magnet") %>% -->
-<!--   filter(school_name != "John H Vanderpoel Elementary Magnet School") %>% -->
-<!--   filter(school_name != "VANDERPOEL") %>% -->
-<!--   filter(school_name != "Noble Street Charter - Pritzker College Prep") %>%  -->
-<!--   filter(school_name != "Bronzeville Scholastic Academy High School") %>% -->
-<!--   filter(school_name != "Urban Prep Academy for Young Men - Bronzeville") %>%  -->
-<!--   filter(school_name != "Isabelle C O'Keeffe Elementary School") %>%  -->
-<!--   filter(school_name != "LEARN Charter ES - Charles and Dorothy Campbell") %>%  -->
-<!--   filter(school_name != "Bronzeville Mil HS") %>%  -->
-<!--   filter(school_name != "Edison Park Elementary School") %>%  -->
-<!--   filter(school_name != "Edison Park") %>%  -->
-<!--   pull(school_name) -->
-<!-- ``` -->
-
 ```{r}
 # identifying names of schools that do not have a school ID (they are only from 2010-2011)
 
 se_elem_upper_2 <- c("Beasley Magnet", "Beaubien", "Bell", "Carnegie", "Coonley", "Edison", "Keller", "Lenart", "McPherson", "Natl Teachers Acad", "Pritzker", "Greeley", "Orozco", "Pulaski", "Bronzeville LH Chrt", "Decatur Classical", "McDade Classical", "Poe Classical", "Skinner Classical", "Skinner North")
+
 
 for(i in 1:nrow(iep_comb)) {
 	for(j in 1:length(se_elem_upper_2)) {
@@ -551,6 +414,20 @@ for(i in 1:nrow(iep_comb)) {
 		}
 	}
 }
+
+# filling in school_ids with unit and vice versa so every school has at least 1 identifier- WRONGGG DONT DO THIS
+
+# for(i in 1:nrow(iep_comb)) {
+# 	if(is.na(iep_comb$school_id[i])) {
+# 		iep_comb$school_id[i] <- iep_comb$unit[i]
+# 	}
+# }
+# 
+# for(i in 1:nrow(iep_comb)) {
+# 	if(is.na(iep_comb$unit[i])) {
+# 		iep_comb$unit[i] <- iep_comb$school_id[i]
+# 	}
+# }
 
 # relabelling se_elem using missing_school_ids vector to make the filtering for selective enrollment more accurate 
 
@@ -567,7 +444,204 @@ iep_comb %>% filter(se_elem == 1) %>% nrow()
 
 iep_comb <- setnames(iep_comb, old = c('n','percent', 'n_1', 'percent_1', 'n_2', 'percent_2'), new = c('n_bil','percent_bil', 'n_iep', 'percent_iep', 'n_free', 'percent_free'))
 
+# make these into numeric variables
+
+iep_comb$percent_bil <- as.numeric(iep_comb$percent_bil)
+iep_comb$percent_iep <- as.numeric(iep_comb$percent_iep)
+iep_comb$percent_free <- as.numeric(iep_comb$percent_free)
+
 ```
+
+```{r merge}
+# BE CAREFUL
+# merging the iep_comb and x datasets to combine info about three student demographics + racial/test score info (respectively) 
+
+master <- merge(x=x, y=iep_comb, by=c("school_id", "year"), all=TRUE)
+
+# making sure it's the right amount of SE school entries
+
+master %>% filter(school_id %in% missing_school_ids) %>% glimpse()
+
+# merging with ISAT score data 
+
+score_data <- y %>% filter(year != 2001) %>% filter(year != 2002) %>% filter(year != 2003) %>% filter(year != 2004) %>% filter(year != 2005) 
+# no ISAT score data for 2015 so filter from other datasets as well for master_2 dataset
+
+master <- master %>% filter(year != 2015)
+
+master_2 <- merge(x=master, y=score_data, by=c("school_id", "year"), all=TRUE)
+```
+
+
+```{r}
+# making bilingualism a control variable (as an example)
+
+# example regression for adding control variable at the school level, after x and iep_comb have been merged
+
+master_2$new_composite_16 <- as.numeric(master_2$new_composite_16)
+master_2$se_elem.x <- as.numeric(master_2$se_elem.x)
+master_2policy_year <- as.numeric(master_2$policy_year)
+master_2$did.x <- as.numeric(master_2$did.x)
+master_2$percent_bil<- as.numeric(master_2$percent_bil)
+
+# DID regression on test scores
+# should I add hhi as a variable here?- yes (-robert)
+
+score_reg = lm(new_composite_16 ~ se_elem.x + policy_year + did.x + percent_bil, data = master_2)
+score_reg_2 = lm(new_composite_16 ~ se_elem.x + policy_year + did.x + hhi + percent_bil, data = master_2)
+```
+
+```{r}
+# time trends
+
+### slope test for the two lines (written with Robert)
+slope_test <- lm(percent_white ~ se_elem*year, data = filter(x, policy_year == 0))
+
+### slope test for the two lines before policy change
+slope_test <- lm(percent_white ~ se_elem.x*year, data = filter(master_2, policy_year == 0))
+slope_test1 <- lm(percent_afam ~ se_elem.x*year, data = filter(master_2, policy_year == 0))
+slope_test2 <- lm(percent_natam ~ se_elem.x*year, data = filter(master_2, policy_year == 0))
+slope_test3 <- lm(percent_asian ~ se_elem.x*year, data = filter(master_2, policy_year == 0))
+slope_test4 <- lm(percent_hisp ~ se_elem.x*year, data = filter(master_2, policy_year == 0))
+
+# should probably put this later since HHI is coded in a later chunk
+slope_test5 <- lm(hhi ~ se_elem.x*year, data = filter(master_2, policy_year == 0))
+
+# slope test for test scores
+slope_test6 <- lm(new_composite_16 ~ se_elem.x*year, data = filter(master_2, policy_year == 0))
+
+# interacting with year gives you the slope difference for a particular group 
+slope_test_bil <- lm(percent_bil ~ se_elem*year, data = filter(iep_comb, policy_year == 0))
+slope_test_bil2 <- lm(percent_bil ~ se_elem*year + did*year, data = iep_comb)
+
+# do for every slope test to see which was significant
+summary(slope_test) 
+summary(slope_test1)
+summary(slope_test2)
+summary(slope_test3)
+summary(slope_test4)
+summary(slope_test5)
+summary(slope_test6)
+
+# slope test 0 had significance for se*year
+# slope tests 2 and 4 had significance for year
+# sloptest2 had significance for all of them but maybe because Nat. Am. as a group is small?
+
+```
+
+```{r}
+# table for slope test results
+
+stargazer(slope_test, slope_test1, slope_test2, slope_test3, 
+          slope_test4, slope_test5, slope_test6,
+          type="html", 
+          dep.var.labels.include = FALSE,
+          column.labels = c("% White", "% African American", "% Native American", "% Asian", "% Hispanic", "HHI", "ISAT Scores"),
+          covariate.labels = c("Selective Enrollment School", "Post Policy Change", "Selective Enrollment*Policy Change"),
+          out="slope_test_by_race_1.html")
+```
+
+```{r}
+
+# plot parallel slopes for SE and non-SE schools in terms of white demographic
+
+plot2 <- ggplot(x, aes(year, n_white, group = se_elem, color = se_elem)) +
+  stat_summary(geom = 'line') +
+   scale_x_continuous(breaks = 0:2100) +
+    geom_vline(xintercept = 2011) +
+    theme_minimal()
+
+plot2 <- ggplot(x, aes(year, percent_white, group = factor(se_elem), color = factor(se_elem))) +
+  stat_summary(geom = 'line') +
+   labs(x= "Year", y = "Percent White") +
+   scale_x_continuous(breaks = 0:2100) +
+    geom_vline(xintercept = 2011) +
+ scale_color_manual(name = c("Selective Enrollment \nStatus "), labels = c("Non-SE", "SE"), values = c("blue", "red")) +
+  theme_bw() 
+
+ggsave("scatter/per_wht.png")
+  
+# percent Afam by se_elem
+
+plot3 <- ggplot(x, aes(year, percent_afam, group = factor(se_elem), color = factor(se_elem))) +
+  stat_summary(geom = 'line') +
+   labs(x= "Year", y = "Percent African American") +
+   scale_x_continuous(breaks = 0:2100) +
+    geom_vline(xintercept = 2011) +
+   scale_color_manual(name = c("Selective Enrollment \nStatus "), labels = c("Non-SE", "SE"), values = c("blue", "red")) +
+    theme_minimal()
+
+ggsave("scatter/per_afam.png")
+
+# percent Native American
+
+plot4 <- ggplot(x, aes(year, percent_natam, group = factor(se_elem), color = factor(se_elem))) +
+  stat_summary(geom = 'line') +
+   labs(x= "Year", y = "Percent Native American") +
+   scale_x_continuous(breaks = 0:2100) +
+    geom_vline(xintercept = 2011) +
+   scale_color_manual(name = c("Selective Enrollment \nStatus "), labels = c("Non-SE", "SE"), values = c("blue", "red")) +
+    theme_minimal()
+
+ggsave("scatter/per_natam.png")
+
+# percent Asian
+
+plot5 <- ggplot(x, aes(year, percent_asian, group = factor(se_elem), color = factor(se_elem))) +
+  stat_summary(geom = 'line') +
+   labs(x= "Year", y = "Percent Asian") +
+   scale_x_continuous(breaks = 0:2100) +
+    geom_vline(xintercept = 2011) +
+   scale_color_manual(name = c("Selective Enrollment \nStatus "), labels = c("Non-SE", "SE"), values = c("blue", "red")) +
+    theme_minimal()
+
+ggsave("scatter/per_asn.png")
+
+# percent Hispanic
+
+plot6 <- ggplot(x, aes(year, percent_hisp, group = factor(se_elem), color = factor(se_elem))) +
+  stat_summary(geom = 'line') +
+  labs(x= "Year", y = "Percent Hispanic") +
+   scale_x_continuous(breaks = 0:2100) +
+    geom_vline(xintercept = 2011) +
+   scale_color_manual(name = c("Selective Enrollment \nStatus "), labels = c("Non-SE", "SE"), values = c("blue", "red")) +
+    theme_minimal() 
+
+ggsave("scatter/per_hsp.png")
+
+```
+
+
+```{r}
+# did regression
+didreg2 = lm(n_white ~ se_elem + policy_year + did, data = x)
+didreg2_1 = lm(percent_white ~ se_elem + policy_year + did, data = x)
+
+didreg3 = lm(n_afam ~ se_elem + policy_year + did, data = x)
+didreg3_1 = lm(percent_afam ~ se_elem + policy_year + did, data = x)
+
+didreg4 = lm(n_natam ~ se_elem + policy_year + did, data = x)
+didreg4_1 = lm(percent_natam ~ se_elem + policy_year + did, data = x)
+
+didreg5 = lm(n_asian ~ se_elem + policy_year + did, data = x)
+didreg5_1 = lm(percent_asian ~ se_elem + policy_year + did, data = x)
+
+didreg6 = lm(n_hisp ~ se_elem + policy_year + did, data = x)
+didreg6_1 = lm(percent_hisp ~ se_elem + policy_year + did, data = x)
+
+```
+
+```{r}
+# DID regression table for race
+
+stargazer(didreg2_1, didreg3_1, didreg4_1, didreg5_1, didreg6_1, 
+          type="html", 
+          dep.var.labels.include = FALSE,
+          column.labels = c("% White", "% African American", "% Native American", "% Asian", "% Hispanic"),
+          covariate.labels = c("Selective Enrollment School", "Post Policy Change", "Difference-in-difference Estimator"),
+          out="did_by_race.html")
+```
+
 
 ```{r}
 # regression for bilingualism as a dependent variable 
@@ -584,12 +658,6 @@ summary(iep_reg2)
 
 iep_reg3 = lm(percent_free ~ se_elem + policy_year + did, data = iep_comb)
 summary(iep_reg3)
-
-# make these into numeric variables
-
-iep_comb$percent_bil <- as.numeric(iep_comb$percent_bil)
-iep_comb$percent_iep <- as.numeric(iep_comb$percent_iep)
-iep_comb$percent_free <- as.numeric(iep_comb$percent_free)
 
 # plots of each variable as dependent variables
 
@@ -615,83 +683,20 @@ plot_free <- ggplot(iep_comb, aes(year, percent_free, group = se_elem, color = s
 
 
 ```{r}
-# adding in Herfindahl-Hirschman Index for race column- a measure of overall diversity
+# running DID regression HHI to see how it changed
 
-x_with_hhi <- x %>% mutate(hhi = ((percent_white/100)^2 + (percent_afam/100)^2 + (percent_api/100)^2 + (percent_hisp/100)^2 + (percent_natam/100)^2 + (percent_multi/100)^2 ))
-
-reg_hhi = lm(hhi ~ se_elem + policy_year + did, data = x_with_hhi)
+reg_hhi = lm(hhi ~ se_elem + policy_year + did, data = x)
 
 summary(reg_hhi)
 
 # overall plot of HHI for SE v. non-SE schools
 
-plot_hhi <- ggplot(x_with_hhi, aes(year, hhi, group = se_elem, color = se_elem)) +
+plot_hhi <- ggplot(x, aes(year, hhi, group = se_elem, color = se_elem)) +
   stat_summary(geom = 'line') +
    scale_x_continuous(breaks = 0:2100) +
     geom_vline(xintercept = 2011) +
     theme_minimal()
 
-# plot of a specific school: (prob don't need with my function below)
-
-plot_hhi_bell <- ggplot(data=subset(x_with_hhi, school== "Bell"), aes(year, hhi, group = se_elem, color = se_elem)) +
-  stat_summary(geom = 'line') +
-   scale_x_continuous(breaks = 0:2100) +
-    geom_vline(xintercept = 2011) +
-    theme_minimal()
-
-plot_test_bell <- ggplot(data=subset(x_with_hhi, school== "Bell"), aes(year, new_composite_12, group = se_elem, color = se_elem)) +
-  stat_summary(geom = 'line') +
-   scale_x_continuous(breaks = 0:2100) +
-    geom_vline(xintercept = 2011) +
-    theme_minimal()
-
-
-```
-
-```{r merge}
-
-# merging the iep_comb and x datasets to combine info about three student demographics + racial/test score info (respectively) 
-
-master <- merge(x=x_with_hhi, y=iep_comb, by=c("school_id", "year"), all=TRUE)
-
-# making sure it's the right amount of SE school entries
-
-master %>% filter(school_id %in% missing_school_ids) %>% glimpse()
-
-# merging with ISAT score data 
-
-y_subset <- y %>% filter(year != 2001) %>% filter(year != 2002) %>% filter(year != 2003) %>% filter(year != 2004) %>% filter(year != 2005) 
-
-# no ISAT score data for 2015 so filter from other datasets as well for master_2 dataset
-
-master_subset <- master %>% filter(year != 2015)
-
-master_2 <- merge(x=master_subset, y=y_subset, by=c("school_id", "year"), all=TRUE)
-
-```
-
-```{r}
-# making bilingualism a control variable (as an example)
-
-# example regression for adding control variable at the school level, after x and iep_comb have been merged
-
-master_2$new_composite_16 <- as.numeric(master_2$new_composite_16)
-master_2$se_elem.x <- as.numeric(master_2$se_elem.x)
-master_2policy_year <- as.numeric(master_2$policy_year)
-master_2$did <- as.numeric(master_2$did)
-master_2$percent_bil<- as.numeric(master_2$percent_bil)
-
-## should I add hhi as a variable here?- ASK (yes)
-
-score_reg = lm(new_composite_16 ~ se_elem.x + policy_year + did.x + percent_bil, data = master_2)
-
-score_reg_2 = lm(new_composite_16 ~ se_elem.x + policy_year + did.x + hhi + percent_bil, data = master_2)
-
-summary(score_reg)
-summary(score_reg_2)
-
-# old regression from above for test scores (might be useful)
-didreg = lm(new_composite_12 ~ se + policy_year + did, data = y)
 ```
 
 
@@ -755,14 +760,18 @@ county.graph(master.long)
 
 #plot_grid(plot_1,plot_2, labels = c('A', 'B'), label_size = 10)
 ```
+```{r}
+# cow plot to put all these together
+race_plots_comb <- plot_grid(plot1, 
+```
 
 
 ```{r}
-# for reference ONLY
+# regression below is for reference ONLY
 reg_hhi = lm(hhi ~ se_elem + policy_year + did, data = x)
 
 # making a vertical dataset with variables of interest
-hhi.long <- melt(x_with_hhi, id.vars=c("year", "hhi", "school_id"))
+hhi.long <- melt(x, id.vars=c("year", "hhi", "school_id"))
 
 # creating a ggplot of percent_white change over time for each SE school
 
@@ -815,6 +824,7 @@ for (i in 1:length(se_school_ids)) { # Loop over loop.vector
 
 x <- hhi.graph(hhi.long)
 
+
 ```
 
 ```{r}
@@ -842,10 +852,11 @@ for(i in 1:5925) {
   y_edit$grade <- c("3rd grade")
 }
 
-  
+
+hhi.long <- melt(x, id.vars=c("year", "hhi", "school_id"))
 
 # making a vertical dataset with variables of interest- DOESN'T WORK- ask why
-test.long <- melt(y_edit, id.vars=c("year", "new_composite_16", "school_id", "grade"))
+test.long <- melt(y, id.vars=c("year", "new_composite_16", "school_id"))
 
 # creating a ggplot of percent_white change over time for each SE school
 
