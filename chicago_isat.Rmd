@@ -489,7 +489,7 @@ master_2 <- master_2 %>%
   mutate(se_elem = ifelse(school_id %in% missing_school_ids, 1, 0)) %>% 
   mutate(did = policy_year * se_elem)
 
-master_2$se_elem <- master_2$se_elem %>% replace_na(0)
+
 ```
 
 
@@ -500,15 +500,22 @@ master_2$se_elem <- master_2$se_elem %>% replace_na(0)
 
 master_2$new_composite_16 <- as.numeric(master_2$new_composite_16)
 master_2$se_elem.x <- as.numeric(master_2$se_elem.x)
+master_2$se_elem <- as.numeric(master_2$se_elem)
+
 master_2policy_year <- as.numeric(master_2$policy_year)
 master_2$did.x <- as.numeric(master_2$did.x)
+master_2$did <- as.numeric(master_2$did)
 master_2$percent_bil<- as.numeric(master_2$percent_bil)
 
 # DID regression on test scores
 # should I add hhi as a variable here?- yes (-robert)
 
-score_reg = lm(new_composite_16 ~ se_elem.x + policy_year + did.x + percent_bil, data = master_2)
-score_reg_2 = lm(new_composite_16 ~ se_elem.x + policy_year + did.x + hhi + percent_bil, data = master_2)
+score_reg = lm(new_composite_16 ~ se_elem + policy_year + did, data = master_2)
+
+# + percent_bil-NVM
+
+score_reg_2 = lm(new_composite_16 ~ se_elem + policy_year + did + hhi, data = master_2)
+
 ```
 
 ```{r}
@@ -737,14 +744,14 @@ master.long <- melt(master, id.vars=c("year", "percent_white", "school_id"))
 
 # creating a ggplot of percent_white change over time for each SE school
 
-county.graph <- function(df, na.rm = TRUE, ...){
+# county.graph <- function(df, na.rm = TRUE, ...){
   
   se_school_ids <- c("610246", "609796", "609799", "609837", "609866", "609794", "610084", "610298", "610070", "610231", "610229", "609850", "610329", "610138", "400019", "609880", "610066", "610132", "610177", "610534")
 
-  plotlist = list()
-  n <- 100
-  
-  p <- NA
+  # plotlist = list()
+  # n <- 100
+  # 
+  # p <- NA
   
 for (i in seq_along(se_school_ids)) { # Loop over loop.vector
   
@@ -806,13 +813,13 @@ hhi.long <- melt(x, id.vars=c("year", "hhi", "school_id"))
 # creating a ggplot of percent_white change over time for each SE school
 
 # DON"T USE a for loop WITHIN a function, just keep for loop
-hhi.graph <- function(df, na.rm = TRUE, ...){
+# hhi.graph <- function(df, na.rm = TRUE, ...){
   
   se_school_ids <- c("610246", "609796", "609799", "609837", "609866", "609794", "610084", "610298", "610070", "610231", "610229", "609850", "610329", "610138", "400019", "609880", "610066", "610132", "610177", "610534")
-  
-df <- hhi.long 
- plotlist <- list()
- 
+
+# df <- hhi.long 
+#  plotlist <- list()
+
 for (i in 1:length(se_school_ids)) { # Loop over loop.vector
   
    hhi_p <- 
