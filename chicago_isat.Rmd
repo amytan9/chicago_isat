@@ -410,7 +410,7 @@ for(i in 1:nrow(iep_comb)) {
 
 iep_comb <- iep_comb %>% 
   mutate(policy_year = ifelse(year > 2011, 1, 0)) %>% 
-  mutate(se_elem = ifelse(school_id %in% missing_school_ids & is.na(se_elem), 1, 0)) %>% 
+  mutate(se_elem = ifelse(school_id %in% missing_school_ids, 1, 0)) %>% 
   mutate(did = policy_year * se_elem)
 
 # checked that there were ~120 observations for 20 SE schools with 6 years of data
@@ -676,11 +676,6 @@ score_reg_read = lm(read_13 ~ se_elem + policy_year + did, data = master_2)
 
 score_reg_read_2 = lm(read_13 ~ se_elem + policy_year + did + hhi, data = master_2)
 
-# made DID regressions above using master_2 dataset instead to include HHI as a control
-# did regression for composite test scores
-#didreg = lm(new_composite_16 ~ se + policy_year + did, data = y)
-#didreg_math = lm(math_14 ~ se + policy_year + did, data = y)
-#didreg_read = lm(read_13 ~ se + policy_year + did, data = y)
 ```
 
 ```{r}
@@ -728,7 +723,6 @@ stargazer(didreg2_1, didreg3_1, didreg4_1, didreg5_1, didreg6_1,
 
 ```{r}
 # regression for bilingualism as a dependent variable 
-
 iep_reg1 = lm(percent_bil ~ se_elem + policy_year + did, data = iep_comb)
 summary(iep_reg1)
 
@@ -762,6 +756,16 @@ plot_free <- ggplot(iep_comb, aes(year, percent_free, group = se_elem, color = s
     geom_vline(xintercept = 2011) +
     theme_minimal()
 
+```
+
+```{r}
+# regression table results for 3 student covariates from IEP data
+stargazer(iep_reg1, iep_reg2, iep_reg3,
+          type="html", 
+          dep.var.labels.include = FALSE,
+          column.labels = c("% Bilingual", "% IEP", "% Free or Reduced Lunch"),
+          covariate.labels = c("Selective Enrollment School", "Post Policy Change", "Difference-in-difference Estimator"),
+          out="did_iep.html")
 ```
 
 
