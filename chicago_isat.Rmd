@@ -29,6 +29,7 @@ library(ggthemes)
 library(gridExtra)
 library(stargazer)
 library(ggplot2)
+library(grid)
 library(tidyverse)
 ```
 
@@ -507,6 +508,8 @@ slope_test5 <- lm(hhi ~ se_elem.x*year_num, data = filter(master_2, policy_year 
 
 # slope test for test scores
 slope_test6 <- lm(new_composite_16 ~ se_elem.x*year_num, data = filter(master_2, policy_year == 0))
+slope_test7 <- lm(math_14 ~ se_elem.x*year_num, data = filter(master_2, policy_year == 0))
+slope_test8 <- lm(read_13 ~ se_elem.x*year_num, data = filter(master_2, policy_year == 0))
 
 # interacting with year gives you the slope difference for a particular group 
 slope_test_bil <- lm(percent_bil ~ se_elem*year, data = filter(iep_comb, policy_year == 0))
@@ -531,22 +534,12 @@ summary(slope_test6)
 # table for slope test results
 
 stargazer(slope_test, slope_test1, slope_test2, slope_test3, 
-          slope_test4, slope_test5, slope_test6,
+          slope_test4, slope_test5, slope_test6, slope_test7, slope_test8,
           type="html", 
           dep.var.labels.include = FALSE,
-          column.labels = c("% White", "% African American", "% Native American", "% Asian", "% Hispanic", "HHI", "ISAT Scores"),
-          covariate.labels = c("Selective Enrollment School", "Post Policy Change", "Selective Enrollment*Policy Change"),
-          out="slope_test_by_race_2.html")
-```
-
-```{r}
-# plot for how test scores changed before and after
-
-test_score_se_plot <- ggplot(master_2, aes(year, new_composite_16, group = se_elem, color = se_elem)) +
-  stat_summary(geom = 'line') +
-   scale_x_continuous(breaks = 0:2100) +
-    geom_vline(xintercept = 2011) +
-    theme_minimal()
+          column.labels = c("% White", "% African American", "% Native American", "% Asian", "% Hispanic", "HHI", "ISAT Composite Scores", "ISAT Math Scores", "ISAT Reading Scores"),
+          covariate.labels = c("Selective Enrollment School", "Years", "Selective Enrollment*Years"),
+          out="slope_test_all.html")
 ```
 
 
@@ -577,7 +570,7 @@ plot3 <- ggplot(x, aes(year, percent_afam, group = factor(se_elem), color = fact
    scale_x_continuous(breaks = 0:2100) +
     geom_vline(xintercept = 2011) +
    scale_color_manual(name = c("Selective Enrollment \nStatus "), labels = c("Non-SE", "SE"), values = c("blue", "red")) +
-    theme_minimal()
+    theme_bw()
 
 ggsave("scatter/per_afam.png")
 
@@ -589,7 +582,7 @@ plot4 <- ggplot(x, aes(year, percent_natam, group = factor(se_elem), color = fac
    scale_x_continuous(breaks = 0:2100) +
     geom_vline(xintercept = 2011) +
    scale_color_manual(name = c("Selective Enrollment \nStatus "), labels = c("Non-SE", "SE"), values = c("blue", "red")) +
-    theme_minimal()
+    theme_bw()
 
 ggsave("scatter/per_natam.png")
 
@@ -601,7 +594,7 @@ plot5 <- ggplot(x, aes(year, percent_asian, group = factor(se_elem), color = fac
    scale_x_continuous(breaks = 0:2100) +
     geom_vline(xintercept = 2011) +
    scale_color_manual(name = c("Selective Enrollment \nStatus "), labels = c("Non-SE", "SE"), values = c("blue", "red")) +
-    theme_minimal()
+    theme_bw()
 
 ggsave("scatter/per_asn.png")
 
@@ -613,7 +606,7 @@ plot6 <- ggplot(x, aes(year, percent_hisp, group = factor(se_elem), color = fact
    scale_x_continuous(breaks = 0:2100) +
     geom_vline(xintercept = 2011) +
    scale_color_manual(name = c("Selective Enrollment \nStatus "), labels = c("Non-SE", "SE"), values = c("blue", "red")) +
-    theme_minimal() 
+    theme_bw()
 
 ggsave("scatter/per_hsp.png")
 
@@ -621,29 +614,44 @@ ggsave("scatter/per_hsp.png")
 
 ```{r}
 # plot parallel slopes for SE and non-SE schools 
-
-#composite scores
-score_plot <- ggplot(master_2, aes(year, new_composite_16, group = se, color = se)) +
+plot6 <- ggplot(x, aes(year, percent_hisp, group = factor(se_elem), color = factor(se_elem))) +
   stat_summary(geom = 'line') +
+  labs(x= "Year", y = "Percent Hispanic") +
    scale_x_continuous(breaks = 0:2100) +
     geom_vline(xintercept = 2011) +
-    theme_minimal() +
+   scale_color_manual(name = c("Selective Enrollment \nStatus "), labels = c("Non-SE", "SE"), values = c("blue", "red")) +
+    theme_bw()
+
+ggsave("scatter/per_hsp.png")
+
+#composite scores
+score_plot <- ggplot(master_2, aes(year, new_composite_16, group = factor(se), color = factor(se))) +
+  stat_summary(geom = 'line') +
+   labs(x= "Year", y = "% Exceed ISAT Composite Score Standards") +
+  scale_color_manual(name = c("Selective Enrollment \nStatus "), labels = c("Non-SE", "SE"), values = c("blue", "red")) +
+   scale_x_continuous(breaks = 0:2100) +
+    geom_vline(xintercept = 2011) +
+    theme_bw() +
   ggsave("score_plot.png")
 
 # math
-score_math_plot <- ggplot(y, aes(year, math_14, group = se, color = se)) +
+score_math_plot <- ggplot(y, aes(year, math_14, group = factor(se), color = factor(se))) +
   stat_summary(geom = 'line') +
+  labs(x= "Year", y = "% Exceed ISAT Math Score Standards") +
+  scale_color_manual(name = c("Selective Enrollment \nStatus "), labels = c("Non-SE", "SE"), values = c("blue", "red")) +
    scale_x_continuous(breaks = 0:2100) +
     geom_vline(xintercept = 2011) +
-    theme_minimal() +
+    theme_bw() +
    ggsave("score_math_plot.png")
 
 # reading
-score_read_plot <- ggplot(y, aes(year, read_13, group = se, color = se)) +
+score_read_plot <- ggplot(y, aes(year, read_13, group = factor(se), color = factor(se))) +
   stat_summary(geom = 'line') +
+  labs(x= "Year", y = "% Exceed ISAT Reading Score Standards") +
+  scale_color_manual(name = c("Selective Enrollment \nStatus "), labels = c("Non-SE", "SE"), values = c("blue", "red")) +
    scale_x_continuous(breaks = 0:2100) +
     geom_vline(xintercept = 2011) +
-    theme_minimal() +
+    theme_bw() +
    ggsave("score_read_plot.png")
 
 ```
@@ -766,12 +774,25 @@ summary(reg_hhi)
 
 # overall plot of HHI for SE v. non-SE schools
 
-plot_hhi <- ggplot(x, aes(year, hhi, group = se_elem, color = se_elem)) +
+plot_hhi <- ggplot(x, aes(year, hhi, group = factor(se_elem), color = factor(se_elem))) +
+  labs(x= "Year", y = "HHI Score") +
+  scale_color_manual(name = c("Selective Enrollment \nStatus "), labels = c("Non-SE", "SE"), values = c("blue", "red")) +
   stat_summary(geom = 'line') +
    scale_x_continuous(breaks = 0:2100) +
     geom_vline(xintercept = 2011) +
-    theme_minimal()
+    theme_bw() +
+  ggsave("plot_hhi.png")
 
+```
+
+```{r}
+# HHI regression table
+stargazer(reg_hhi,
+          type="html", 
+          dep.var.labels.include = FALSE,
+          column.labels = c("HHI Score"),
+          covariate.labels = c("Selective Enrollment School", "Post Policy Change", "Difference-in-difference Estimator"),
+          out="did_hhi.html")
 ```
 
 
@@ -815,6 +836,10 @@ for (i in seq_along(se_school_ids)) { # Loop over loop.vector
    print(p)
 }
   
+#work on this later
+#plot1 <- readPNG('plot1.png')
+
+#test_grid <- grid.arrange(rasterGrob(plot_1),rasterGrob(plot_2),rasterGrob(plot_3), rasterGrob(plot_4), ncol=2)
 
 # can't cowplot them all together because they're .png files, not objects
   
@@ -835,6 +860,8 @@ for (i in seq_along(se_school_ids)) { # Loop over loop.vector
 #plot_2 <- system.file("extdata", "plot_2.png", package = "cowplot")
 
 #plot_grid(plot_1,plot_2, labels = c('A', 'B'), label_size = 10)
+
+
 ```
 
 
